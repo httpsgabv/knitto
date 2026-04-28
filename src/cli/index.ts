@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import { createApp } from './bootstrap.js'
 import { registerCreateCommand } from './commands/create.command.js'
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const app = createApp()
 
   const program = new Command()
@@ -14,10 +14,5 @@ async function main(): Promise<void> {
 
   registerCreateCommand(program, app)
 
-  await program.parseAsync()
+  await program.parseAsync(process.argv)
 }
-
-main().catch((error: unknown) => {
-  console.error(error)
-  process.exit(1)
-})

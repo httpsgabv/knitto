@@ -11,12 +11,13 @@
     "dist"
   ],
   "scripts": {
+    "knitto": "tsx src/index.ts create",
+    "start": "node dist/index.js",
     "build": "tsup",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "start": "node dist/index.js"
+    "format:check": "prettier --check ."
   },
   "tsup": {
     "entry": [

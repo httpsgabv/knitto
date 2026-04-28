@@ -1,5 +1,7 @@
-export function main(): void {
-  console.log('knitto')
-}
+#!/usr/bin/env node
+import { main } from './cli/index.js'
 
-main()
+main().catch((error: unknown) => {
+  console.error(error)
+  process.exit(1)
+})
