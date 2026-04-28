@@ -1,15 +1,16 @@
+import type { PackageManager } from '../../config/package-manager.registry.js'
+
 type CreateProjectUseCaseInput = {
   projectName: string
   kitSlug: string
   featureSlug: string[]
-  packageManager: 'npm' | 'yarn' | 'pnpm'
+  packageManager: PackageManager
 }
 
 export class CreateProjectUseCase {
   constructor() {}
 
   async execute(input: CreateProjectUseCaseInput) {
-    console.log('Creating project with the following input: ', input)
     return Promise.resolve()
   }
 }

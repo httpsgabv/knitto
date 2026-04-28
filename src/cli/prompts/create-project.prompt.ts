@@ -1,11 +1,12 @@
 import { input, select } from '@inquirer/prompts'
 import { Kits } from '../../config/kits.registry.js'
+import type { PackageManager } from '../../config/package-manager.registry.js'
 
 export type CreateProjectPromptAnswers = {
   projectName: string
   kitSlug: string
   featureSlug: string[]
-  packageManager: 'npm' | 'yarn' | 'pnpm'
+  packageManager: PackageManager
 }
 
 export async function createProjectPrompt(): Promise<CreateProjectPromptAnswers> {

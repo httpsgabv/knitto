@@ -1,4 +1,4 @@
-import { CreateProjectUseCase } from '../application/use-cases/create-project.use-case.js'
+import { CreateProjectUseCase } from '../engine/use-cases/create-project.use-case.js'
 
 export type App = {
   createProjectUseCase: CreateProjectUseCase
