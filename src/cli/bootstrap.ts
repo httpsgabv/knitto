@@ -1,3 +1,4 @@
+import { ProjectNameValidator } from '../engine/services/project-name-validator.js'
 import { CreateProjectUseCase } from '../engine/use-cases/create-project.use-case.js'
 
 export type App = {
@@ -5,7 +6,11 @@ export type App = {
 }
 
 export function createApp(): App {
-  const createProjectUseCase = new CreateProjectUseCase()
+  const projectNameValidator = new ProjectNameValidator()
+
+  const createProjectUseCase = new CreateProjectUseCase({
+    projectNameValidator,
+  })
 
   return {
     createProjectUseCase,
