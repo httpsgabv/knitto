@@ -5,11 +5,15 @@ import path from 'node:path'
 import type { FileSystem } from '../../adapters/fs/file-system'
 import { KnittoError } from '../../core/errors/knitto-error'
 import { Errors } from '../../core/errors/errors'
+import type { TemplateSourceProvider } from '../../adapters/template-source/template-source-provider'
+import type { Catalog } from '../../core/catalog/catalog'
 
 export class CreateProjectUseCase {
   constructor(
     private readonly inputValidator: CreateProjectInputValidator,
-    private readonly fileSystem: FileSystem
+    private readonly fileSystem: FileSystem,
+    private readonly catalog: Catalog,
+    private readonly templateProvider: TemplateSourceProvider
   ) {}
 
   async execute(input: CreateProjectInput): Promise<CreateProjectOutput> {
@@ -22,6 +26,10 @@ export class CreateProjectUseCase {
         Errors.TARGET_DIR_EXISTS
       )
     }
+
+    const kit = this.catalog.getKit(data.kitSlug)
+
+    const kitTemplate = await this.templateProvider.fetch(kit.source)
 
     return {
       projectName: data.projectName,

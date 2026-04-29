@@ -1,4 +1,5 @@
 import { NodeFileSystem } from '../adapters/fs/node-file-system'
+import { GithubTemplateProvider } from '../adapters/template-source/github-template-provider'
 import { OfficialCatalog } from '../catalog/official-catalog'
 import type { Catalog } from '../core/catalog/catalog'
 import { CreateProjectInputValidator } from '../engine/create-project/create-project-input.validator'
@@ -13,10 +14,13 @@ export function createApp(): App {
   const catalog = new OfficialCatalog()
 
   const fileSystem = new NodeFileSystem()
+  const templateProvider = new GithubTemplateProvider(fileSystem)
 
   const createProjectUseCase = new CreateProjectUseCase(
     new CreateProjectInputValidator(),
-    fileSystem
+    fileSystem,
+    catalog,
+    templateProvider
   )
 
   return {
