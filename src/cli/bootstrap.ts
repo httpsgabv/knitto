@@ -1,7 +1,8 @@
-import { OfficialCatalog } from '../catalog/official-catalog.js'
-import type { Catalog } from '../core/catalog/catalog.js'
-import { ProjectNameValidator } from '../engine/services/project-name-validator.js'
-import { CreateProjectUseCase } from '../engine/use-cases/create-project.use-case.js'
+import { NodeFileSystem } from '../adapters/fs/node-file-system'
+import { OfficialCatalog } from '../catalog/official-catalog'
+import type { Catalog } from '../core/catalog/catalog'
+import { CreateProjectInputValidator } from '../engine/create-project/create-project-input.validator'
+import { CreateProjectUseCase } from '../engine/create-project/create-project.use-case'
 
 export type App = {
   catalog: Catalog
@@ -11,11 +12,12 @@ export type App = {
 export function createApp(): App {
   const catalog = new OfficialCatalog()
 
-  const projectNameValidator = new ProjectNameValidator()
+  const fileSystem = new NodeFileSystem()
 
-  const createProjectUseCase = new CreateProjectUseCase({
-    projectNameValidator,
-  })
+  const createProjectUseCase = new CreateProjectUseCase(
+    new CreateProjectInputValidator(),
+    fileSystem
+  )
 
   return {
     catalog,
