@@ -1,6 +1,6 @@
 import chalk from 'chalk'
 
-export const log = {
+export const printer = {
   info(message: string) {
     console.log(chalk.cyan(message))
   },
