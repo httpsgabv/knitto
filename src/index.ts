@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { main } from './cli/index.js'
+import { main } from './cli/index'
 
 main().catch((error: unknown) => {
   console.error(error)
