@@ -12,11 +12,14 @@ export class OfficialCatalog implements Catalog {
   private readonly kits: Kit[]
   private readonly features: Feature[]
 
-  constructor() {
+  constructor(
+    kits: Kit[] = officialKits,
+    features: Feature[] = officialFeatures
+  ) {
     try {
       const parsed = CatalogSchema.parse({
-        kits: officialKits,
-        features: officialFeatures,
+        kits,
+        features,
       })
 
       this.kits = parsed.kits
