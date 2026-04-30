@@ -1,8 +1,8 @@
 import path from 'node:path'
-import type { FileSystem } from '../../adapters/fs/file-system'
-import type { FileOperation } from '../../core/generation/file-operation'
+import type { FileSystem } from '@adapters/fs/file-system'
+import type { FileOperation } from '@core/generation/file-operation'
 import type { VariableRenderer } from './variable-renderer'
-import type { PackageJsonMerger } from '../merge/package-json-merger'
+import type { PackageJsonMerger } from '@engine/merge/package-json-merger'
 import type { EnvMerger } from '../merge/env-merger'
 import type { ReadmeMerger } from '../merge/readme-merger'
 

@@ -1,7 +1,7 @@
 import path from 'node:path'
-import type { FileSystem } from '../../adapters/fs/file-system'
-import type { Template } from '../../core/template/template'
-import type { TemplateFile } from '../../core/template/template-file'
+import type { FileSystem } from '@adapters/fs/file-system'
+import type { Template } from '@core/template/template'
+import type { TemplateFile } from '@core/template/template-file'
 
 export class TemplateScanner {
   constructor(private readonly fileSystem: FileSystem) {}

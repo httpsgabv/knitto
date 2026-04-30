@@ -1,5 +1,5 @@
 import z from 'zod'
-import { ProjectNameSchema } from '../../core/project/project-name.schema'
+import { ProjectNameSchema } from '@core/project/project-name.schema'
 
 export const CreateProjectInputSchema = z.object({
   projectName: ProjectNameSchema,

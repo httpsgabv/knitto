@@ -1,7 +1,7 @@
 import type {
   GenerationPlan,
   PlannedSources,
-} from '../../core/generation/generation-plan'
+} from '@core/generation/generation-plan'
 import type { ConflictDetector } from './conflict-detector'
 import type { OperationBuilder } from './operation-builder'
 import type { OperationSorter } from './operation-sorter'

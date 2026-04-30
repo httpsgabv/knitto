@@ -1,5 +1,5 @@
 import { ZodError } from 'zod'
-import { KnittoError } from '../../core/errors/knitto-error'
+import { KnittoError } from '@core/errors/knitto-error'
 
 export function formatError(error: unknown) {
   if (error instanceof KnittoError) {

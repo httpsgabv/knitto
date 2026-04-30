@@ -1,5 +1,5 @@
-import type { FileSystem } from '../../adapters/fs/file-system'
-import { sortObjectKeys } from '../../shared/json'
+import type { FileSystem } from '@adapters/fs/file-system'
+import { sortObjectKeys } from '@shared/json'
 import { JsonMerger } from './json-merger'
 
 type PackageJsonShape = Record<string, unknown> & {

@@ -1,12 +1,12 @@
 import path from 'node:path'
-import type { Kit } from '../../core/catalog/kit'
+import type { Kit } from '@core/catalog/kit'
 import type {
   FileOperation,
   OperationOrigin,
-} from '../../core/generation/file-operation'
-import type { TemplateFile } from '../../core/template/template-file'
-import { createId } from '../../shared/ids'
-import type { Feature } from '../../core/catalog/feature'
+} from '@core/generation/file-operation'
+import type { TemplateFile } from '@core/template/template-file'
+import { createId } from '@shared/ids'
+import type { Feature } from '@core/catalog/feature'
 
 export class OperationBuilder {
   buildKitOperation(input: {

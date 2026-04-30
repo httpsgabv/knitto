@@ -1,4 +1,4 @@
-import type { FileSystem } from '../../adapters/fs/file-system'
+import type { FileSystem } from '@adapters/fs/file-system'
 
 export class EnvMerger {
   constructor(private readonly fileSystem: FileSystem) {}

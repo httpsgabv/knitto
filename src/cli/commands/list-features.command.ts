@@ -1,6 +1,6 @@
 import type { Command } from 'commander'
-import { printer } from '../output/printer'
-import type { Catalog } from '../../core/catalog/catalog'
+import { printer } from '@cli/output/printer'
+import type { Catalog } from '@core/catalog/catalog'
 
 export function registerListFeaturesCommand(
   program: Command,

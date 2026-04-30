@@ -1,5 +1,5 @@
 import type { Command } from 'commander'
-import { printer } from '../output/printer'
+import { printer } from '@cli/output/printer'
 
 export function registerDoctorCommand(program: Command) {
   program

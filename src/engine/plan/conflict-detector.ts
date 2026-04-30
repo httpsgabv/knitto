@@ -1,5 +1,5 @@
-import type { FileOperation } from '../../core/generation/file-operation'
-import type { PlanConflict } from '../../core/generation/plan-conflict'
+import type { FileOperation } from '@core/generation/file-operation'
+import type { PlanConflict } from '@core/generation/plan-conflict'
 
 export class ConflictDetector {
   detect(operations: FileOperation[]): PlanConflict[] {

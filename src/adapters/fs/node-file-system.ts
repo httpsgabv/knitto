@@ -1,7 +1,7 @@
 import fs from 'fs-extra'
 import fg from 'fast-glob'
 import type { FileSystem } from './file-system'
-import { normalizeSlashes } from '../../shared/paths'
+import { normalizeSlashes } from '@shared/paths'
 
 export class NodeFileSystem implements FileSystem {
   async ensureDir(path: string): Promise<void> {

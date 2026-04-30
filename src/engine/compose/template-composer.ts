@@ -1,6 +1,6 @@
-import { Errors } from '../../core/errors/errors'
-import { KnittoError } from '../../core/errors/knitto-error'
-import type { GenerationPlan } from '../../core/generation/generation-plan'
+import { Errors } from '@core/errors/errors'
+import { KnittoError } from '@core/errors/knitto-error'
+import type { GenerationPlan } from '@core/generation/generation-plan'
 import type { OperationExecutor } from './operation-executor'
 
 export class TemplateComposer {

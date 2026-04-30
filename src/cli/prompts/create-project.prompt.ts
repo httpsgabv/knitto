@@ -1,7 +1,7 @@
 import { input, select, confirm, checkbox } from '@inquirer/prompts'
-import type { SupportedPackageManager } from '../../core/project/project-config'
-import type { CreateProjectInput } from '../../engine/create-project/create-project.input'
-import type { Catalog } from '../../core/catalog/catalog'
+import type { SupportedPackageManager } from '@core/project/project-config'
+import type { CreateProjectInput } from '@engine/create-project/create-project.input'
+import type { Catalog } from '@core/catalog/catalog'
 
 type CreateProjectPromptOptions = Partial<CreateProjectInput>
 

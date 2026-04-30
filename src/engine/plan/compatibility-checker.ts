@@ -1,6 +1,6 @@
-import type { CompatibilityCheckInput } from '../../core/catalog/compatiblity'
-import { Errors } from '../../core/errors/errors'
-import { KnittoError } from '../../core/errors/knitto-error'
+import type { CompatibilityCheckInput } from '@core/catalog/compatiblity'
+import { Errors } from '@core/errors/errors'
+import { KnittoError } from '@core/errors/knitto-error'
 
 export class CompatibilityChecker {
   check(input: CompatibilityCheckInput) {

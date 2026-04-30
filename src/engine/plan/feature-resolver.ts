@@ -1,9 +1,9 @@
-import type { Catalog } from '../../core/catalog/catalog'
-import type { Feature } from '../../core/catalog/feature'
-import type { Kit } from '../../core/catalog/kit'
-import { Errors } from '../../core/errors/errors'
-import { KnittoError } from '../../core/errors/knitto-error'
-import { unique } from '../../shared/array'
+import type { Catalog } from '@core/catalog/catalog'
+import type { Feature } from '@core/catalog/feature'
+import type { Kit } from '@core/catalog/kit'
+import { Errors } from '@core/errors/errors'
+import { KnittoError } from '@core/errors/knitto-error'
+import { unique } from '@shared/array'
 
 export type ResolveFeaturesInput = {
   kit: Kit

@@ -1,4 +1,4 @@
-import type { Feature } from '../core/catalog/feature'
+import type { Feature } from '@core/catalog/feature'
 
 export const officialFeatures: Feature[] = [
   {

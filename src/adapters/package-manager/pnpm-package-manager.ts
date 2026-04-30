@@ -1,4 +1,4 @@
-import type { Shell } from '../shell/shell'
+import type { Shell } from '@adapters/shell/shell'
 import type { PackageManager } from './package-manager'
 
 export class PnpmPackageManager implements PackageManager {

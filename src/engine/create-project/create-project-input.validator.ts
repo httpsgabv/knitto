@@ -4,8 +4,8 @@ import {
   CreateProjectInputSchema,
   type CreateProjectInputData,
 } from './create-project-input.schema'
-import { KnittoError } from '../../core/errors/knitto-error'
-import { Errors } from '../../core/errors/errors'
+import { KnittoError } from '@core/errors/knitto-error'
+import { Errors } from '@core/errors/errors'
 
 export class CreateProjectInputValidator {
   validate(input: CreateProjectInput): CreateProjectInputData {

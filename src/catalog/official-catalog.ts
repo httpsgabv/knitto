@@ -1,11 +1,11 @@
 import { ZodError } from 'zod'
-import type { Catalog } from '../core/catalog/catalog'
-import { CatalogSchema } from '../core/catalog/catalog.schema'
-import type { Kit } from '../core/catalog/kit'
+import type { Catalog } from '@core/catalog/catalog'
+import { CatalogSchema } from '@core/catalog/catalog.schema'
+import type { Kit } from '@core/catalog/kit'
 import { officialKits } from './kits'
-import { KnittoError } from '../core/errors/knitto-error'
-import { Errors } from '../core/errors/errors'
-import type { Feature } from '../core/catalog/feature'
+import { KnittoError } from '@core/errors/knitto-error'
+import { Errors } from '@core/errors/errors'
+import type { Feature } from '@core/catalog/feature'
 import { officialFeatures } from './features'
 
 export class OfficialCatalog implements Catalog {

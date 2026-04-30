@@ -1,4 +1,4 @@
-import type { FileOperation } from '../../core/generation/file-operation'
+import type { FileOperation } from '@core/generation/file-operation'
 
 export class OperationSorter {
   sort(operations: FileOperation[]): FileOperation[] {

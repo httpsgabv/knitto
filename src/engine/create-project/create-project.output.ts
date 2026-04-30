@@ -1,4 +1,4 @@
-import type { GenerationPlan } from '../../core/generation/generation-plan'
+import type { GenerationPlan } from '@core/generation/generation-plan'
 
 export type CreateProjectOutput = {
   projectName: string

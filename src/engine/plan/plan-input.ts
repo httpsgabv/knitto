@@ -1,7 +1,7 @@
-import type { Feature } from '../../core/catalog/feature'
-import type { Kit } from '../../core/catalog/kit'
-import type { SupportedPackageManager } from '../../core/project/project-config'
-import type { Template } from '../../core/template/template'
+import type { Feature } from '@core/catalog/feature'
+import type { Kit } from '@core/catalog/kit'
+import type { SupportedPackageManager } from '@core/project/project-config'
+import type { Template } from '@core/template/template'
 
 export type PlanInput = {
   projectName: string

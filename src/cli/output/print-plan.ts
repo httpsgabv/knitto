@@ -1,4 +1,4 @@
-import type { GenerationPlan } from '../../core/generation/generation-plan'
+import type { GenerationPlan } from '@core/generation/generation-plan'
 import { printer } from './printer'
 
 export function printPlan(plan: GenerationPlan) {

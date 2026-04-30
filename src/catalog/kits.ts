@@ -1,4 +1,4 @@
-import type { Kit } from '../core/catalog/kit'
+import type { Kit } from '@core/catalog/kit'
 
 export const officialKits: Kit[] = [
   {

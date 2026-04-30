@@ -14,7 +14,17 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "exactOptionalPropertyTypes": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@shared/*": ["./shared/*"],
+      "@core/*": ["./core/*"],
+      "@catalog/*": ["./catalog/*"],
+      "@cli/*": ["./cli/*"],
+      "@engine/*": ["./engine/*"],
+      "@adapters/*": ["./adapters/*"],
+      "@types/*": ["./types/*"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["dist", "node_modules"]

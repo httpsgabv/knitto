@@ -1,4 +1,4 @@
-import type { SupportedPackageManager } from '../../core/project/project-config'
+import type { SupportedPackageManager } from '@core/project/project-config'
 
 export type CreateProjectInput = {
   projectName: string

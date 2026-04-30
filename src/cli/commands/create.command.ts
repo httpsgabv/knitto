@@ -1,6 +1,6 @@
 import type { Command } from 'commander'
-import type { CreateProjectInput } from '../../engine/create-project/create-project.input'
-import { RunCreateFlow } from '../create-flow'
+import type { CreateProjectInput } from '@engine/create-project/create-project.input'
+import { RunCreateFlow } from '@cli/create-flow'
 
 export function registerCreateCommand(
   program: Command,
