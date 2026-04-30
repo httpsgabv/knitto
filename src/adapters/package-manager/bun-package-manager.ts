@@ -1,5 +1,5 @@
-import type { Shell } from '@adapters/shell/shell.js'
-import type { PackageManager } from './package-manager.js'
+import type { Shell } from '@adapters/shell/shell'
+import type { PackageManager } from './package-manager'
 
 export class BunPackageManager implements PackageManager {
   constructor(private readonly shell: Shell) {}

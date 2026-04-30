@@ -1,13 +1,13 @@
 import { Command } from 'commander'
-import { createApp } from './bootstrap.js'
-import { registerCreateCommand } from './commands/create.command.js'
-import { registerListKitsCommand } from './commands/list-kits.command.js'
-import { registerDoctorCommand } from './commands/doctor.command.js'
-import { registerListFeaturesCommand } from './commands/list-features.command.js'
-import { printer } from './output/printer.js'
-import { formatError } from './output/format-error.js'
-import { KnittoError } from '../core/errors/knitto-error.js'
-import { makeCreateFlow } from './create-flow.js'
+import { createApp } from './bootstrap'
+import { registerCreateCommand } from './commands/create.command'
+import { registerListKitsCommand } from './commands/list-kits.command'
+import { registerDoctorCommand } from './commands/doctor.command'
+import { registerListFeaturesCommand } from './commands/list-features.command'
+import { printer } from './output/printer'
+import { formatError } from './output/format-error'
+import { KnittoError } from '../core/errors/knitto-error'
+import { makeCreateFlow } from './create-flow'
 
 export async function main(): Promise<void> {
   const app = createApp()
