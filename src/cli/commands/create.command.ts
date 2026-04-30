@@ -1,33 +1,24 @@
 import type { Command } from 'commander'
-import type { App } from '../bootstrap'
-import { createProjectPrompt } from '../prompts/create-project.prompt'
-import ora from 'ora'
-import { printPlan } from '../output/print-plan'
+import type { CreateProjectInput } from '../../engine/create-project/create-project.input'
+import { RunCreateFlow } from '../create-flow'
 
-export function registerCreateCommand(program: Command, app: App) {
+export function registerCreateCommand(
+  program: Command,
+  runCreateFlow: RunCreateFlow
+) {
   program
     .command('create')
     .description('Create a new project from a kit')
-    .option('--dry-run', 'Plan changes without writting files')
-    .option('--no-install', 'Skip dependency installation')
-    .option('--no-git', 'Skip git initialization')
+    .option('--dry-run', 'Plan changes without writting files', false)
+    .option('--no-install', 'Skip dependency installation', false)
+    .option('--no-git', 'Skip git initialization', false)
     .option('--target-dir <path>', 'Target directory')
-    .action(async () => {
-      const answers = await createProjectPrompt({
-        catalog: app.catalog,
+    .action(async (options: CreateProjectInput) => {
+      await runCreateFlow({
+        dryRun: options.dryRun,
+        installDependencies: options.installDependencies,
+        initializeGit: options.initializeGit,
+        targetDir: options.targetDir,
       })
-      const spinner = ora('Creating generation plan').start()
-
-      try {
-        const result = await app.createProjectUseCase.execute(answers)
-        spinner.succeed(
-          result.executed ? 'Project created' : 'Dry run completed'
-        )
-
-        printPlan(result.plan)
-      } catch (error) {
-        spinner.fail('Failed to create project')
-        throw error
-      }
     })
 }

@@ -5,8 +5,8 @@ export type CreateProjectInput = {
   kitSlug: string
   featureSlugs?: string[]
   packageManager?: SupportedPackageManager
-  targetDir?: string
-  dryRun?: boolean
-  installDependencies?: boolean
-  initializeGit?: boolean
+  targetDir?: string | undefined
+  dryRun?: boolean | undefined
+  installDependencies?: boolean | undefined
+  initializeGit?: boolean | undefined
 }

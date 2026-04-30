@@ -11,9 +11,8 @@
     "dist"
   ],
   "scripts": {
-    "knitto": "tsx src/index.ts create",
+    "knitto": "tsx src/index.ts",
     "knitto:dry": "tsx src/index.ts create --dry-run",
-    "knitto:cli": "tsx src/index.ts",
     "start": "node dist/index.js",
     "build": "tsup",
     "typecheck": "tsc --noEmit -p tsconfig.json",
