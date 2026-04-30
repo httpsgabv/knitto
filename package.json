@@ -19,7 +19,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:unit": "vitest run"
+    "test:unit": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:cov": "vitest run --coverage && npx vite preview --outDir ./html"
   },
   "tsup": {
     "entry": [
@@ -39,6 +41,8 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.6.0",
+    "@vitest/coverage-v8": "^4.1.5",
+    "@vitest/ui": "^4.1.5",
     "eslint": "^10.2.1",
     "prettier": "^3.8.3",
     "tsup": "^8.5.1",

@@ -6,10 +6,13 @@ import { KnittoError } from '@core/errors/knitto-error'
 import type { Template } from '@core/template/template'
 import type { FileSystem } from '@adapters/fs/file-system'
 import type { TemplateSourceProvider } from './template-source-provider'
-import tiged from 'tiged'
+import type { TemplateSourceResolver } from './template-source-resolver'
 
 export class GithubTemplateProvider implements TemplateSourceProvider {
-  constructor(private readonly fileSystem: FileSystem) {}
+  constructor(
+    private readonly fileSystem: FileSystem,
+    private readonly templateSourceResolver: TemplateSourceResolver
+  ) {}
 
   async fetch(
     source: Extract<TemplateSource, { type: 'github' }>
@@ -27,19 +30,10 @@ export class GithubTemplateProvider implements TemplateSourceProvider {
       `knitto-${repo}-${source.name}-${Date.now()}`
     )
     const templatePath = path.join(tempRoot, source.name)
-    const templateGithubPath = `${source.repo}${source.path}${source.name}`
 
     await this.fileSystem.ensureDir(tempRoot)
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const emitter = tiged(templateGithubPath, {
-      disableCache: true,
-      force: true,
-      verbose: true,
-    })
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    await emitter.clone(templatePath)
+    await this.templateSourceResolver.resolve(templatePath, source)
 
     const succesfullyCloned = await this.fileSystem.pathExists(templatePath)
 

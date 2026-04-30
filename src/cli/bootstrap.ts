@@ -3,6 +3,7 @@ import { NodeGitClient } from '../adapters/git/node-git-client'
 import { PackageManagerResolver } from '../adapters/package-manager/package-manager-resolver'
 import { ExecaShell } from '../adapters/shell/execa-shell'
 import { GithubTemplateProvider } from '@adapters/template-source/github-template-provider'
+import { TigedTemplateSourceResolver } from '@adapters/template-source/tiged-template-source-resolver'
 import { OfficialCatalog } from '@catalog/official-catalog'
 import type { Catalog } from '@core/catalog/catalog'
 import { OperationExecutor } from '@engine/compose/operation-executor'
@@ -30,7 +31,11 @@ export function createApp(): App {
   const catalog = new OfficialCatalog()
 
   const fileSystem = new NodeFileSystem()
-  const templateProvider = new GithubTemplateProvider(fileSystem)
+  const templateSourceResolver = new TigedTemplateSourceResolver()
+  const templateProvider = new GithubTemplateProvider(
+    fileSystem,
+    templateSourceResolver
+  )
   const templateScanner = new TemplateScanner(fileSystem)
 
   const variableRenderer = new VariableRenderer()

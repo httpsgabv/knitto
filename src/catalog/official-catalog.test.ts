@@ -1,7 +1,10 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+import { CatalogSchema } from '@core/catalog/catalog.schema'
+import { Errors } from '@core/errors/errors'
 import type { Kit } from '@core/catalog/kit'
 import type { Feature } from '@core/catalog/feature'
 import { OfficialCatalog } from './official-catalog'
+import { KnittoError } from '@core/errors/knitto-error'
 
 const fakeKits: Kit[] = [
   {
@@ -87,6 +90,38 @@ describe('OfficialCatalog', () => {
       expect(() => catalog.getFeature('unknown-feature')).toThrow(
         'Unknown feature: unknown-feature'
       )
+    })
+  })
+
+  describe('constructor error handling', () => {
+    it('should throw KnittoError with INVALID_CATALOG_CONFIGURATION when ZodError occurs', () => {
+      const invalidKits = [{ slug: 123 }] as never
+      const invalidFeatures = [] as Feature[]
+
+      expect(() => new OfficialCatalog(invalidKits, invalidFeatures)).toThrow(
+        KnittoError
+      )
+      try {
+        new OfficialCatalog(invalidKits, invalidFeatures)
+      } catch (error) {
+        expect(error).toBeInstanceOf(KnittoError)
+        expect((error as KnittoError).code).toBe(
+          Errors.INVALID_CATALOG_CONFIGURATION
+        )
+      }
+    })
+
+    it('should rethrow non-ZodError as-is', () => {
+      const originalError = new Error('Some unexpected error')
+      vi.spyOn(CatalogSchema, 'parse').mockImplementation(() => {
+        throw originalError
+      })
+
+      expect(() => new OfficialCatalog(fakeKits, fakeFeatures)).toThrow(
+        'Some unexpected error'
+      )
+
+      vi.restoreAllMocks()
     })
   })
 })

@@ -27,7 +27,7 @@ export class OfficialCatalog implements Catalog {
     } catch (error) {
       if (error instanceof ZodError) {
         throw new KnittoError(
-          error.issues[0]?.message ?? 'Invalid catalog configuration',
+          error.issues[0]?.message!,
           Errors.INVALID_CATALOG_CONFIGURATION,
           error.issues
         )
