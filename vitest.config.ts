@@ -6,7 +6,12 @@ export default defineConfig({
     reporters: ['default', 'html'],
     coverage: {
       include: ['src/**/*.ts'],
-      exclude: ['test/**/*'],
+      exclude: [
+        'test/**/*',
+        'src/cli/commands/*.command.ts',
+        'src/cli/output/print-plan.ts',
+        'src/cli/output/printer.ts',
+      ],
     },
   },
   resolve: {
