@@ -11,5 +11,6 @@ export const officialKits: Kit[] = [
       path: '/kits/',
     },
     description: 'A NestJS starter for building modular APIs.',
+    compatibleFeatures: ['pino-logging'],
   },
 ]

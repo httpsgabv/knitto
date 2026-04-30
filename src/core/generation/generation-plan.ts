@@ -4,7 +4,7 @@ import type { PlanConflict } from './plan-conflict'
 import type { PlanWarning } from './plan-warning'
 
 export type PlannedSources = {
-  type: 'kit'
+  type: 'kit' | 'feature'
   slug: string
   templateRoot: string
 }

@@ -1,5 +1,5 @@
 export type OperationOrigin = {
-  type: 'kit'
+  type: 'kit' | 'feature'
   slug: string
 }
 

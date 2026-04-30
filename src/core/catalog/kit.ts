@@ -6,6 +6,7 @@ export const KitSchema = z.object({
   slug: z.string().min(1),
   source: TemplateSourceSchema,
   description: z.string().min(1),
+  compatibleFeatures: z.array(z.string()).default([]),
 })
 
 export type Kit = {
@@ -13,4 +14,5 @@ export type Kit = {
   slug: string
   source: TemplateSource
   description: string
+  compatibleFeatures: string[]
 }

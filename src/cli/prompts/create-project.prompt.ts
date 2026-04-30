@@ -1,6 +1,6 @@
-import { input, select, confirm } from '@inquirer/prompts'
-import type { PackageManager } from '../../config/package-manager.registry.js'
-import type { Catalog } from '../../core/catalog/catalog.js'
+import { input, select, confirm, checkbox } from '@inquirer/prompts'
+import type { Catalog } from '../../core/catalog/catalog'
+import type { SupportedPackageManager } from '../../core/project/project-config'
 
 type CreateProjectPromptOptions = {
   catalog: Catalog
@@ -9,8 +9,8 @@ type CreateProjectPromptOptions = {
 export type CreateProjectPromptAnswers = {
   projectName: string
   kitSlug: string
-  featureSlug: string[]
-  packageManager: PackageManager
+  featureSlugs: string[]
+  packageManager: SupportedPackageManager
   targetDir: string
   dryRun: boolean
   installDependencies: boolean
@@ -34,6 +34,49 @@ export async function createProjectPrompt({
     })),
   })
 
+  const selectedKit = catalog.getKit(kitSlug)
+  const availableFeatures = catalog
+    .listFeatures()
+    .filter(
+      (feature) =>
+        selectedKit.compatibleFeatures.includes(feature.slug) &&
+        feature.supports.includes(selectedKit.slug)
+    )
+
+  const featureSlugs =
+    availableFeatures.length > 0
+      ? await checkbox({
+          message: 'Optional features',
+          choices: availableFeatures.map((feature) => ({
+            message: feature.name,
+            value: feature.slug,
+            description: feature.description,
+          })),
+        })
+      : []
+
+  const packageManager = await select<SupportedPackageManager>({
+    message: 'Package manager',
+    choices: [
+      {
+        name: 'pnpm',
+        value: 'pnpm',
+      },
+      {
+        name: 'npm',
+        value: 'npm',
+      },
+      {
+        name: 'yarn',
+        value: 'yarn',
+      },
+      {
+        name: 'bun',
+        value: 'bun',
+      },
+    ],
+  })
+
   const installDependencies = await confirm({
     message: 'Install dependencies?',
     default: true,
@@ -47,8 +90,8 @@ export async function createProjectPrompt({
   return {
     projectName,
     kitSlug,
-    featureSlug: [],
-    packageManager: 'pnpm',
+    featureSlugs,
+    packageManager,
     dryRun: false,
     targetDir: `./${projectName}`,
     installDependencies,

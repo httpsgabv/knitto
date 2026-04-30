@@ -11,7 +11,7 @@ export class TemplateScanner {
     const files = await this.fileSystem.listFiles(templateDir)
 
     return files.map((relativePath) => ({
-      absolutePath: path.join(relativePath),
+      absolutePath: path.join(template.rootPath, relativePath),
       relativePath,
     }))
   }

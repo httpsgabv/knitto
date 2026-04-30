@@ -19,6 +19,11 @@ export class GenerationPlanner {
   async plan(input: PlanInput): Promise<GenerationPlan> {
     const variables = this.buildVariables(input.projectName)
     const kitFiles = await this.templateScanner.scan(input.kitTemplate)
+    const featureFiles = await Promise.all(
+      input.featureTemplates.map((template) =>
+        this.templateScanner.scan(template)
+      )
+    )
 
     const kitOperations = this.operationBuilder.buildKitOperation({
       kit: input.kit,
@@ -26,7 +31,18 @@ export class GenerationPlanner {
       targetDir: input.targetDir,
     })
 
-    const operations = this.operationSorter.sort([...kitOperations])
+    const featureOperations = input.features.flatMap((feature, index) =>
+      this.operationBuilder.buildFeatureOperation({
+        feature,
+        files: featureFiles[index] ?? [],
+        targetDir: input.targetDir,
+      })
+    )
+
+    const operations = this.operationSorter.sort([
+      ...kitOperations,
+      ...featureOperations,
+    ])
     const conflicts = this.conflictDetector.detect(operations)
 
     const sources: PlannedSources[] = [
@@ -35,6 +51,11 @@ export class GenerationPlanner {
         slug: input.kit.slug,
         templateRoot: input.kitTemplate.rootPath,
       },
+      ...input.features.map((feature, index) => ({
+        type: 'feature' as const,
+        slug: feature.slug,
+        templateRoot: input.featureTemplates[index]?.rootPath ?? '',
+      })),
     ]
 
     return {

@@ -54,4 +54,8 @@ export class GithubTemplateProvider implements TemplateSourceProvider {
       rootPath: templatePath,
     }
   }
+
+  async fetchMany(sources: TemplateSource[]): Promise<Template[]> {
+    return Promise.all(sources.map((source) => this.fetch(source)))
+  }
 }

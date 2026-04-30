@@ -8,14 +8,24 @@ import { Errors } from '../../core/errors/errors'
 import type { TemplateSourceProvider } from '../../adapters/template-source/template-source-provider'
 import type { Catalog } from '../../core/catalog/catalog'
 import type { GenerationPlanner } from '../plan/generation-planner'
+import type { FeatureResolver } from '../plan/feature-resolver'
+import type { CompatibilityChecker } from '../plan/compatibility-checker'
+import type { TemplateComposer } from '../compose/template-composer'
+import type { PackageManagerResolver } from '../../adapters/package-manager/package-manager-resolver'
+import type { GitClient } from '../../adapters/git/git-client'
 
 export class CreateProjectUseCase {
   constructor(
     private readonly inputValidator: CreateProjectInputValidator,
-    private readonly fileSystem: FileSystem,
     private readonly catalog: Catalog,
+    private readonly featureResolver: FeatureResolver,
+    private readonly compatibilityChecker: CompatibilityChecker,
     private readonly templateProvider: TemplateSourceProvider,
-    private readonly generationPlanner: GenerationPlanner
+    private readonly generationPlanner: GenerationPlanner,
+    private readonly templateComposer: TemplateComposer,
+    private readonly packageManagerResolver: PackageManagerResolver,
+    private readonly gitClient: GitClient,
+    private readonly fileSystem: FileSystem
   ) {}
 
   async execute(input: CreateProjectInput): Promise<CreateProjectOutput> {
@@ -30,15 +40,29 @@ export class CreateProjectUseCase {
     }
 
     const kit = this.catalog.getKit(data.kitSlug)
+    const features = this.featureResolver.resolve({
+      kit,
+      featureSlugs: data.featureSlugs,
+    })
+
+    this.compatibilityChecker.check({
+      kit,
+      features,
+    })
 
     const kitTemplate = await this.templateProvider.fetch(kit.source)
+    const featureTemplates = await this.templateProvider.fetchMany(
+      features.map((feature) => feature.source)
+    )
 
     const plan = await this.generationPlanner.plan({
       projectName: data.projectName,
       targetDir,
       packageManager: data.packageManager,
       kit,
+      features,
       kitTemplate,
+      featureTemplates,
     })
 
     if (plan.conflicts.length > 0) {
@@ -56,6 +80,19 @@ export class CreateProjectUseCase {
         plan,
         executed: false,
       }
+    }
+
+    await this.templateComposer.compose(plan)
+
+    if (data.installDependencies) {
+      const packageManager = this.packageManagerResolver.resolve(
+        data.packageManager
+      )
+      await packageManager.install(targetDir)
+    }
+
+    if (data.initializeGit) {
+      await this.gitClient.init(targetDir)
     }
 
     return {
