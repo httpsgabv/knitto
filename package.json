@@ -18,7 +18,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:unit": "vitest run src/shared"
   },
   "tsup": {
     "entry": [
