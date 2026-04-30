@@ -6,7 +6,7 @@ export class ExecaShell implements Shell {
   async run(
     command: string,
     args: string[],
-    options: { cwd?: string }
+    options: { cwd: string }
   ): Promise<void> {
     await execa(command, args, {
       cwd: options.cwd,
