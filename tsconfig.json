@@ -3,7 +3,7 @@
     "target": "ES2022",
     "module": "esnext",
     "moduleResolution": "bundler",
-    "rootDir": "./src",
+    "rootDir": ".",
     "outDir": "./dist",
     "strict": true,
     "types": ["node"],
@@ -15,15 +15,16 @@
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["./shared/*"],
-      "@core/*": ["./core/*"],
-      "@catalog/*": ["./catalog/*"],
-      "@cli/*": ["./cli/*"],
-      "@engine/*": ["./engine/*"],
-      "@adapters/*": ["./adapters/*"],
-      "@types/*": ["./types/*"]
+      "@shared/*": ["./src/shared/*"],
+      "@core/*": ["./src/core/*"],
+      "@catalog/*": ["./src/catalog/*"],
+      "@cli/*": ["./src/cli/*"],
+      "@engine/*": ["./src/engine/*"],
+      "@adapters/*": ["./src/adapters/*"],
+      "@types/*": ["./src/types/*"],
+      "@test/*": ["./test/*"]
     }
   },
   "include": ["src/**/*.ts"],
