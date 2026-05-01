@@ -13,6 +13,7 @@ import type { CompatibilityChecker } from '../plan/compatibility-checker'
 import type { TemplateComposer } from '../compose/template-composer'
 import type { PackageManagerResolver } from '@adapters/package-manager/package-manager-resolver'
 import type { GitClient } from '@adapters/git/git-client'
+import { printer } from '@cli/output/printer'
 
 export class CreateProjectUseCase {
   constructor(
@@ -64,6 +65,8 @@ export class CreateProjectUseCase {
       kitTemplate,
       featureTemplates,
     })
+
+    printer.muted(JSON.stringify(plan, null, 2))
 
     if (plan.conflicts.length > 0) {
       throw new KnittoError(
