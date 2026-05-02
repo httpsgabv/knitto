@@ -1,0 +1,110 @@
+import type { Feature } from '@core/catalog/feature'
+import type { Kit } from '@core/catalog/kit'
+import { Errors } from '@core/errors/errors'
+import type { FeatureManifest, KitManifest } from '@core/manifest/manifest'
+import type { Template } from '@core/template/template'
+import { describe, expect, it } from 'vitest'
+import { ManifestPlanningInputValidator } from './manifest-planning-input-validator'
+import type { PlanInput } from './plan-input'
+
+const kitFixture: Kit = {
+  name: 'Base Kit',
+  slug: 'base-kit',
+  description: 'Base kit fixture',
+  source: {
+    type: 'github',
+    repo: 'knitto/base-kit',
+    name: 'base-kit',
+    path: '.',
+  },
+  compatibleFeatures: [],
+}
+
+const featureFixture: Feature = {
+  name: 'Authentication',
+  slug: 'auth',
+  description: 'Auth feature fixture',
+  source: {
+    type: 'github',
+    repo: 'knitto/auth',
+    name: 'auth',
+    path: '.',
+  },
+  supports: [],
+  requires: [],
+  conflictsWith: [],
+}
+
+const kitTemplate: Template = { rootPath: '/templates/base-kit' }
+const featureTemplate: Template = { rootPath: '/templates/auth' }
+
+const kitManifest: KitManifest = {
+  schemaVersion: 1,
+  type: 'kit',
+  slug: 'base-kit',
+  name: 'Base Kit',
+  description: 'Base kit fixture',
+  supports: [],
+  requires: [],
+  conflictsWith: [],
+  operations: [],
+}
+
+const featureManifest: FeatureManifest = {
+  schemaVersion: 1,
+  type: 'feature',
+  slug: 'auth',
+  name: 'Authentication',
+  description: 'Auth feature fixture',
+  supports: ['node'],
+  requires: [],
+  conflictsWith: [],
+  operations: [],
+}
+
+function createInput(overrides: Partial<PlanInput> = {}): PlanInput {
+  return {
+    projectName: 'demo-app',
+    targetDir: '/projects/demo-app',
+    packageManager: 'pnpm',
+    kit: kitFixture,
+    features: [featureFixture],
+    kitTemplate,
+    featureTemplates: [featureTemplate],
+    kitManifest,
+    featureManifests: [featureManifest],
+    ...overrides,
+  }
+}
+
+describe('ManifestPlanningInputValidator', () => {
+  const validator = new ManifestPlanningInputValidator()
+
+  it('returns validated manifests when inputs are aligned', () => {
+    expect(validator.validate(createInput())).toEqual({
+      kitManifest,
+      featureManifests: [featureManifest],
+    })
+  })
+
+  it('fails when the kit manifest is missing', () => {
+    expect(() => validator.validate(createInput({ kitManifest: null }))).toThrowError(
+      expect.objectContaining({
+        name: 'KnittoError',
+        code: Errors.MISSING_TEMPLATE_MANIFEST,
+        message:
+          'Template manifest missing for kit "base-kit": /templates/base-kit/knitto.json',
+      })
+    )
+  })
+
+  it('fails when feature manifest order does not match selected features', () => {
+    expect(() =>
+      validator.validate(
+        createInput({
+          featureManifests: [{ ...featureManifest, slug: 'billing' }],
+        })
+      )
+    ).toThrow('Feature manifest order does not match selected features')
+  })
+})

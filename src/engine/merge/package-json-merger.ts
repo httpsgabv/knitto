@@ -18,8 +18,9 @@ export class PackageJsonMerger extends JsonMerger {
   }
 
   async merge(source: string, target: string) {
-    const targetJson =
-      (await this.fileSystem.readJson<PackageJsonShape>(target)) ?? {}
+    const targetJson = (await this.fileSystem.pathExists(target))
+      ? ((await this.fileSystem.readJson<PackageJsonShape>(target)) ?? {})
+      : {}
     const sourceJson =
       (await this.fileSystem.readJson<PackageJsonShape>(source)) ?? {}
 

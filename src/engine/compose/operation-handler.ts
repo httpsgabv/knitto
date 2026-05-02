@@ -1,7 +1,7 @@
-import type { FileOperation } from '@core/generation/file-operation'
-import type { ExecutionContext } from './handlers/execution-context'
+import type { GenerationOperation } from '@core/generation/operation'
+import type { OperationContext } from './operation-context'
 
-export interface OperationHandler<T extends FileOperation> {
+export interface OperationHandler<T extends GenerationOperation> {
   type: T['type']
-  execute: (operation: T, context: ExecutionContext) => Promise<void>
+  execute: (operation: T, context: OperationContext) => Promise<void>
 }

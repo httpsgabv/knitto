@@ -2,15 +2,33 @@ import { NodeFileSystem } from '../adapters/fs/node-file-system'
 import { NodeGitClient } from '../adapters/git/node-git-client'
 import { PackageManagerResolver } from '../adapters/package-manager/package-manager-resolver'
 import { ExecaShell } from '../adapters/shell/execa-shell'
+import { FastGlobTemplateFileMatcher } from '@adapters/template-file-matcher/fast-glob-template-file-matcher'
 import { GithubTemplateProvider } from '@adapters/template-source/github-template-provider'
 import { TigedTemplateSourceResolver } from '@adapters/template-source/tiged-template-source-resolver'
 import { OfficialCatalog } from '@catalog/official-catalog'
 import type { Catalog } from '@core/catalog/catalog'
+import { ImportEditor } from '@engine/ast/import-editor'
+import { NestModuleEditor } from '@engine/ast/nest-module-editor'
+import { SourceFileEditor } from '@engine/ast/source-file-editor'
+import { TsMorphProjectFactory } from '@engine/ast/ts-morph-project-factory'
+import { AppendEnvHandler } from '@engine/compose/handlers/append-env.handler'
+import { AppendReadmeHandler } from '@engine/compose/handlers/append-readme.handler'
+import { AstAddNamedImportHandler } from '@engine/compose/handlers/ast-add-named-import.handler'
+import { AstNestAddModuleImportHandler } from '@engine/compose/handlers/ast-nest-add-module-import.handler'
+import { CopyFileHandler } from '@engine/compose/handlers/copy-file.handler'
+import { MergePackageJsonHandler } from '@engine/compose/handlers/merge-package-json.handler'
+import { SkipFileHandler } from '@engine/compose/handlers/skip-file.handler'
+import type { OperationBaseContext } from '@engine/compose/operation-context'
 import { OperationExecutor } from '@engine/compose/operation-executor'
+import { OperationHandlerRegistry } from '@engine/compose/operation-handler-registry'
 import { TemplateComposer } from '@engine/compose/template-composer'
 import { VariableRenderer } from '@engine/compose/variable-renderer'
 import { CreateProjectInputValidator } from '@engine/create-project/create-project-input.validator'
 import { CreateProjectUseCase } from '@engine/create-project/create-project.use-case'
+import { ManifestFileFilter } from '@engine/manifest/manifest-file-filter'
+import { ManifestLoader } from '@engine/manifest/manifest-loader'
+import { ManifestReader } from '@engine/manifest/manifest-reader'
+import { ManifestValidator } from '@engine/manifest/manifest-validator'
 import { EnvMerger } from '@engine/merge/env-merger'
 import { PackageJsonMerger } from '@engine/merge/package-json-merger'
 import { ReadmeMerger } from '@engine/merge/readme-merger'
@@ -18,7 +36,11 @@ import { CompatibilityChecker } from '@engine/plan/compatibility-checker'
 import { ConflictDetector } from '@engine/plan/conflict-detector'
 import { FeatureResolver } from '@engine/plan/feature-resolver'
 import { GenerationPlanner } from '@engine/plan/generation-planner'
-import { OperationBuilder } from '@engine/plan/operation-builder'
+import { createManifestOperationHandlers } from '@engine/plan/handlers/create-manifest-operation-handlers'
+import { ManifestOperationBuilder } from '@engine/plan/manifest-operation-builder'
+import { ManifestOperationPathResolver } from '@engine/plan/manifest-operation-path-resolver'
+import { ManifestOperationsExpander } from '@engine/plan/manifest-operations-expander'
+import { ManifestPlanningInputValidator } from '@engine/plan/manifest-planning-input-validator'
 import { OperationSorter } from '@engine/plan/operation-sorter'
 import { TemplateScanner } from '@engine/plan/template-scanner'
 
@@ -42,21 +64,51 @@ export function createApp(): App {
   const packageJsonMerger = new PackageJsonMerger(fileSystem)
   const envMerger = new EnvMerger(fileSystem)
   const readmeMerger = new ReadmeMerger(fileSystem)
-  const operationExecutor = new OperationExecutor(
+  const manifestReader = new ManifestReader(fileSystem)
+  const manifestValidator = new ManifestValidator()
+  const manifestLoader = new ManifestLoader(manifestReader, manifestValidator)
+  const tsMorphProjectFactory = new TsMorphProjectFactory()
+  const sourceFileEditor = new SourceFileEditor(tsMorphProjectFactory)
+  const importEditor = new ImportEditor()
+  const nestModuleEditor = new NestModuleEditor(importEditor)
+  const operationHandlers = new OperationHandlerRegistry({
+    'copy-file': new CopyFileHandler(),
+    'merge-package-json': new MergePackageJsonHandler(),
+    'append-env': new AppendEnvHandler(),
+    'append-readme': new AppendReadmeHandler(),
+    'skip-file': new SkipFileHandler(),
+    'ast.add-named-import': new AstAddNamedImportHandler(),
+    'ast.nest.add-module-import': new AstNestAddModuleImportHandler(),
+  })
+  const operationBaseContext: OperationBaseContext = {
     fileSystem,
     variableRenderer,
     packageJsonMerger,
     envMerger,
-    readmeMerger
+    readmeMerger,
+    sourceFileEditor,
+    importEditor,
+    nestModuleEditor,
+  }
+  const operationExecutor = new OperationExecutor(
+    operationHandlers,
+    operationBaseContext
   )
 
   const templateComposer = new TemplateComposer(operationExecutor)
+  const manifestOperationBuilder = new ManifestOperationBuilder(
+    createManifestOperationHandlers(),
+    new ManifestOperationPathResolver()
+  )
+  const templateFileMatcher = new FastGlobTemplateFileMatcher()
 
   const generationPlanner = new GenerationPlanner(
     templateScanner,
-    new OperationBuilder(),
     new OperationSorter(),
-    new ConflictDetector()
+    new ConflictDetector(),
+    new ManifestFileFilter(templateFileMatcher),
+    new ManifestPlanningInputValidator(),
+    new ManifestOperationsExpander(manifestOperationBuilder)
   )
 
   const createProjectInputValidator = new CreateProjectInputValidator()
@@ -73,6 +125,7 @@ export function createApp(): App {
     featureResolver,
     compatibilityChecker,
     templateProvider,
+    manifestLoader,
     generationPlanner,
     templateComposer,
     packageManagerResolver,

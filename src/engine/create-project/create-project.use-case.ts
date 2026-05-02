@@ -1,6 +1,7 @@
 import type { CreateProjectInput } from './create-project.input'
 import type { CreateProjectInputValidator } from './create-project-input.validator'
 import type { CreateProjectOutput } from './create-project.output'
+import type { FeatureManifest, KitManifest } from '@core/manifest/manifest'
 import path from 'node:path'
 import type { FileSystem } from '@adapters/fs/file-system'
 import { KnittoError } from '@core/errors/knitto-error'
@@ -11,6 +12,7 @@ import type { GenerationPlanner } from '../plan/generation-planner'
 import type { FeatureResolver } from '../plan/feature-resolver'
 import type { CompatibilityChecker } from '../plan/compatibility-checker'
 import type { TemplateComposer } from '../compose/template-composer'
+import type { ManifestLoader } from '../manifest/manifest-loader'
 import type { PackageManagerResolver } from '@adapters/package-manager/package-manager-resolver'
 import type { GitClient } from '@adapters/git/git-client'
 import { printer } from '@cli/output/printer'
@@ -22,6 +24,7 @@ export class CreateProjectUseCase {
     private readonly featureResolver: FeatureResolver,
     private readonly compatibilityChecker: CompatibilityChecker,
     private readonly templateProvider: TemplateSourceProvider,
+    private readonly manifestLoader: ManifestLoader,
     private readonly generationPlanner: GenerationPlanner,
     private readonly templateComposer: TemplateComposer,
     private readonly packageManagerResolver: PackageManagerResolver,
@@ -55,6 +58,27 @@ export class CreateProjectUseCase {
     const featureTemplates = await this.templateProvider.fetchMany(
       features.map((feature) => feature.source)
     )
+    const kitManifest = (await this.manifestLoader.load(kitTemplate.rootPath, {
+      type: 'kit',
+      slug: kit.slug,
+    })) as KitManifest | null
+    const featureManifests = (await this.manifestLoader.loadMany(
+      features.map((feature, index) => {
+        const template = featureTemplates[index]
+
+        if (template === undefined) {
+          throw new Error('Feature templates must align with selected features')
+        }
+
+        return {
+          templateRoot: template.rootPath,
+          expectedOrigin: {
+            type: 'feature' as const,
+            slug: feature.slug,
+          },
+        }
+      })
+    )) as Array<FeatureManifest | null>
 
     const plan = await this.generationPlanner.plan({
       projectName: data.projectName,
@@ -64,6 +88,8 @@ export class CreateProjectUseCase {
       features,
       kitTemplate,
       featureTemplates,
+      kitManifest,
+      featureManifests,
     })
 
     printer.muted(JSON.stringify(plan, null, 2))

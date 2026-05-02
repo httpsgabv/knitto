@@ -1,9 +1,9 @@
-import type { FileOperation } from '@core/generation/file-operation'
+import type { GenerationOperation } from '@core/generation/operation'
 import type { PlanConflict } from '@core/generation/plan-conflict'
 
 export class ConflictDetector {
-  detect(operations: FileOperation[]): PlanConflict[] {
-    const operationsByTarget = new Map<string, FileOperation[]>()
+  detect(operations: GenerationOperation[]): PlanConflict[] {
+    const operationsByTarget = new Map<string, GenerationOperation[]>()
 
     for (const operation of operations) {
       if (!('target' in operation)) {
@@ -33,8 +33,51 @@ export class ConflictDetector {
           operationIds: copyOperations.map((operation) => operation.id),
         })
       }
+
+      const destructiveCollision = this.findDestructiveCopyCollision(group)
+
+      if (destructiveCollision !== undefined) {
+        conflicts.push({
+          code: 'DUPLICATE_UNSAFE_WRITE',
+          message: `Copy operation would overwrite generated content at ${target}`,
+          target,
+          operationIds: destructiveCollision,
+        })
+      }
     }
 
     return conflicts
+  }
+
+  private isMergeOrAppendOperation(operation: GenerationOperation): boolean {
+    return (
+      operation.type === 'merge-package-json' ||
+      operation.type === 'append-env' ||
+      operation.type === 'append-readme'
+    )
+  }
+
+  private findDestructiveCopyCollision(
+    operations: GenerationOperation[]
+  ): string[] | undefined {
+    for (let index = 0; index < operations.length; index += 1) {
+      const operation = operations[index]
+
+      if (operation === undefined) {
+        continue
+      }
+
+      if (!this.isMergeOrAppendOperation(operation)) {
+        continue
+      }
+
+      for (const laterOperation of operations.slice(index + 1)) {
+        if (laterOperation.type === 'copy-file') {
+          return [operation.id, laterOperation.id]
+        }
+      }
+    }
+
+    return undefined
   }
 }

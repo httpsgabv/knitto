@@ -7,5 +7,8 @@ export class SkipFileHandler implements OperationHandler<SkipFileOperation> {
   async execute(
     _operation: SkipFileOperation,
     _context: Parameters<OperationHandler<SkipFileOperation>['execute']>[1]
-  ) {}
+  ): Promise<void> {
+    void _operation
+    void _context
+  }
 }

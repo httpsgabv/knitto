@@ -4,7 +4,7 @@ import tseslint from 'typescript-eslint'
 
 export default defineConfig(
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**'],
+    ignores: ['dist/**', 'coverage/**', 'html/**', 'node_modules/**'],
   },
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
@@ -21,6 +21,16 @@ export default defineConfig(
       '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-non-null-asserted-optional-chain': 'off',
+    },
+  },
+  {
+    files: ['**/*.test.ts', 'test/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
   {

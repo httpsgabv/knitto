@@ -3,7 +3,9 @@ import type {
   PlannedSources,
 } from '@core/generation/generation-plan'
 import type { ConflictDetector } from './conflict-detector'
-import type { OperationBuilder } from './operation-builder'
+import { ManifestFileFilter } from '../manifest/manifest-file-filter'
+import { ManifestOperationsExpander } from './manifest-operations-expander'
+import { ManifestPlanningInputValidator } from './manifest-planning-input-validator'
 import type { OperationSorter } from './operation-sorter'
 import type { PlanInput } from './plan-input'
 import type { TemplateScanner } from './template-scanner'
@@ -11,12 +13,17 @@ import type { TemplateScanner } from './template-scanner'
 export class GenerationPlanner {
   constructor(
     private readonly templateScanner: TemplateScanner,
-    private readonly operationBuilder: OperationBuilder,
     private readonly operationSorter: OperationSorter,
-    private readonly conflictDetector: ConflictDetector
+    private readonly conflictDetector: ConflictDetector,
+    private readonly manifestFileFilter: ManifestFileFilter,
+    private readonly manifestPlanningInputValidator: ManifestPlanningInputValidator,
+    private readonly manifestOperationsExpander: ManifestOperationsExpander
   ) {}
 
   async plan(input: PlanInput): Promise<GenerationPlan> {
+    const { kitManifest, featureManifests } =
+      this.manifestPlanningInputValidator.validate(input)
+
     const variables = this.buildVariables(input.projectName)
     const kitFiles = await this.templateScanner.scan(input.kitTemplate)
     const featureFiles = await Promise.all(
@@ -25,24 +32,29 @@ export class GenerationPlanner {
       )
     )
 
-    const kitOperations = this.operationBuilder.buildKitOperation({
-      kit: input.kit,
-      files: kitFiles,
-      targetDir: input.targetDir,
+    const filteredKitFiles = this.manifestFileFilter.filter(
+      kitFiles,
+      kitManifest
+    )
+    const filteredFeatureFiles = featureFiles.map((files, index) => {
+      const manifest = featureManifests[index]
+
+      if (manifest === undefined) {
+        throw new Error('Feature manifests must align with selected features')
+      }
+
+      return this.manifestFileFilter.filter(files, manifest)
     })
 
-    const featureOperations = input.features.flatMap((feature, index) =>
-      this.operationBuilder.buildFeatureOperation({
-        feature,
-        files: featureFiles[index] ?? [],
-        targetDir: input.targetDir,
-      })
-    )
+    const manifestOperations = this.manifestOperationsExpander.expand({
+      planInput: input,
+      kitFiles: filteredKitFiles,
+      featureFiles: filteredFeatureFiles,
+      kitManifest,
+      featureManifests,
+    })
 
-    const operations = this.operationSorter.sort([
-      ...kitOperations,
-      ...featureOperations,
-    ])
+    const operations = this.operationSorter.sort(manifestOperations)
     const conflicts = this.conflictDetector.detect(operations)
 
     const sources: PlannedSources[] = [

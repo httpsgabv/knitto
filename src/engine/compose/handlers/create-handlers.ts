@@ -1,31 +1,23 @@
-import type { FileOperation } from '@core/generation/file-operation'
-import type { OperationHandler } from '../operation-handler'
+import type { OperationHandlerRecord } from '../operation-handler-registry'
+import { OperationHandlerRegistry } from '../operation-handler-registry'
 import { AppendEnvHandler } from './append-env.handler'
 import { AppendReadmeHandler } from './append-readme.handler'
+import { AstAddNamedImportHandler } from './ast-add-named-import.handler'
+import { AstNestAddModuleImportHandler } from './ast-nest-add-module-import.handler'
 import { CopyFileHandler } from './copy-file.handler'
 import { MergePackageJsonHandler } from './merge-package-json.handler'
 import { SkipFileHandler } from './skip-file.handler'
 
-type HandlerMap = Map<FileOperation['type'], OperationHandler<FileOperation>>
-type OperationHandlerRegistry = {
-  [K in FileOperation['type']]: OperationHandler<
-    Extract<FileOperation, { type: K }>
-  >
-}
-
-export function createHandlers(): HandlerMap {
-  const handlers: OperationHandlerRegistry = {
+export function createHandlers(): OperationHandlerRegistry {
+  const handlers: OperationHandlerRecord = {
     'copy-file': new CopyFileHandler(),
     'merge-package-json': new MergePackageJsonHandler(),
     'append-env': new AppendEnvHandler(),
     'append-readme': new AppendReadmeHandler(),
     'skip-file': new SkipFileHandler(),
+    'ast.add-named-import': new AstAddNamedImportHandler(),
+    'ast.nest.add-module-import': new AstNestAddModuleImportHandler(),
   }
 
-  return new Map(
-    Object.values(handlers).map((handler) => [
-      handler.type,
-      handler as OperationHandler<FileOperation>,
-    ])
-  )
+  return new OperationHandlerRegistry(handlers)
 }

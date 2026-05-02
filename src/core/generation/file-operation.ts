@@ -3,13 +3,13 @@ export type OperationOrigin = {
   slug: string
 }
 
-export type BaseFileOperation = {
+export type BaseOperation = {
   id: string
   origin: OperationOrigin
   description: string
 }
 
-export type CopyFileOperation = BaseFileOperation & {
+export type CopyFileOperation = BaseOperation & {
   type: 'copy-file'
   source: string
   target: string
@@ -17,28 +17,28 @@ export type CopyFileOperation = BaseFileOperation & {
   overwrite: boolean
 }
 
-export type MergePackageJsonOperation = BaseFileOperation & {
+export type MergePackageJsonOperation = BaseOperation & {
   type: 'merge-package-json'
   source: string
   target: string
   strategy: 'safe-merge'
 }
 
-export type AppendEnvOperation = BaseFileOperation & {
+export type AppendEnvOperation = BaseOperation & {
   type: 'append-env'
   source: string
   target: string
   strategy: 'append-missing'
 }
 
-export type AppendReadmeOperation = BaseFileOperation & {
+export type AppendReadmeOperation = BaseOperation & {
   type: 'append-readme'
   source: string
   target: string
   heading: string
 }
 
-export type SkipFileOperation = BaseFileOperation & {
+export type SkipFileOperation = BaseOperation & {
   type: 'skip-file'
   source: string
   reason: string

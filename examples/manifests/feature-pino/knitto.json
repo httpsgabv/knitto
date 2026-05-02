@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "type": "feature",
+  "slug": "pino-logging",
+  "name": "Pino Logging",
+  "description": "Add a basic Pino logging setup.",
+  "supports": ["nestjs"],
+  "requires": [],
+  "conflictsWith": [],
+  "files": {
+    "include": ["**/*"],
+    "exclude": ["knitto.json"]
+  },
+  "operations": [
+    {
+      "type": "merge-package-json",
+      "source": "package.json",
+      "target": "package.json",
+      "strategy": "safe-merge"
+    },
+    {
+      "type": "append-env",
+      "source": ".env.example",
+      "target": ".env.example",
+      "strategy": "append-missing"
+    },
+    {
+      "type": "append-readme",
+      "source": "README.knitto.md",
+      "target": "README.md",
+      "heading": "Pino Logging"
+    },
+    {
+      "type": "copy-file",
+      "source": "src/logger/logger.module.ts",
+      "target": "src/logger/logger.module.ts",
+      "renderVariables": true,
+      "overwrite": false
+    },
+    {
+      "type": "ast.nest.add-module-import",
+      "target": "src/app.module.ts",
+      "import": {
+        "named": "LoggerModule",
+        "from": "./logger/logger.module"
+      },
+      "moduleName": "LoggerModule"
+    }
+  ]
+}

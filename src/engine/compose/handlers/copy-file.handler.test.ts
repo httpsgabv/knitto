@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { CopyFileOperation } from '@core/generation/file-operation'
+import { ImportEditor } from '@engine/ast/import-editor'
+import { NestModuleEditor } from '@engine/ast/nest-module-editor'
+import { SourceFileEditor } from '@engine/ast/source-file-editor'
+import { TsMorphProjectFactory } from '@engine/ast/ts-morph-project-factory'
 import { FakeFileSystem } from '../../../../test/adapters/fs/fake-file-system'
 import { VariableRenderer } from '../variable-renderer'
 import { CopyFileHandler } from './copy-file.handler'
@@ -27,6 +31,9 @@ describe('CopyFileHandler', () => {
       packageJsonMerger: {} as never,
       envMerger: {} as never,
       readmeMerger: {} as never,
+      sourceFileEditor: new SourceFileEditor(new TsMorphProjectFactory()),
+      importEditor: new ImportEditor(),
+      nestModuleEditor: new NestModuleEditor(),
       variables: { name: 'Knitto' },
     })
 

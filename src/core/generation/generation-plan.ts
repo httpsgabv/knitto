@@ -1,6 +1,6 @@
 import type { SupportedPackageManager } from '../project/project-config'
-import type { FileOperation } from './file-operation'
 import type { PlanConflict } from './plan-conflict'
+import type { GenerationOperation } from './operation'
 import type { PlanWarning } from './plan-warning'
 
 export type PlannedSources = {
@@ -17,7 +17,7 @@ export type GenerationPlan = {
   }
   sources: PlannedSources[]
   variables: Record<string, string>
-  operations: FileOperation[]
+  operations: GenerationOperation[]
   warnings: PlanWarning[]
   conflicts: PlanConflict[]
 }
