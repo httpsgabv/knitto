@@ -206,4 +206,60 @@ describe('ManifestOperationsExpander', () => {
       }),
     ])
   })
+
+  it('fails when feature manifests are not aligned with selected features', () => {
+    expect(() =>
+      expander.expand({
+        planInput: basePlanInput,
+        kitManifest: {
+          schemaVersion: 1,
+          type: 'kit',
+          slug: 'base-kit',
+          name: 'Base Kit',
+          description: 'Base kit fixture',
+          supports: [],
+          requires: [],
+          conflictsWith: [],
+          operations: [],
+        },
+        featureManifests: [],
+        kitFiles: [],
+        featureFiles: [[]],
+      })
+    ).toThrow('Feature manifests must align with selected features')
+  })
+
+  it('uses an empty feature file list when a feature file entry is missing', () => {
+    const featureManifest: FeatureManifest = {
+      schemaVersion: 1,
+      type: 'feature',
+      slug: 'auth',
+      name: 'Authentication',
+      description: 'Auth feature fixture',
+      supports: ['node'],
+      requires: [],
+      conflictsWith: [],
+      operations: [{ type: 'add-all' }],
+    }
+
+    const operations = expander.expand({
+      planInput: basePlanInput,
+      kitManifest: {
+        schemaVersion: 1,
+        type: 'kit',
+        slug: 'base-kit',
+        name: 'Base Kit',
+        description: 'Base kit fixture',
+        supports: [],
+        requires: [],
+        conflictsWith: [],
+        operations: [],
+      },
+      featureManifests: [featureManifest],
+      kitFiles: [],
+      featureFiles: [],
+    })
+
+    expect(operations).toEqual([])
+  })
 })

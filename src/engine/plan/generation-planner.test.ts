@@ -613,6 +613,124 @@ describe('GenerationPlanner', () => {
       } as never)
     ).rejects.toThrow('Feature manifest order does not match selected features')
   })
+
+  it('fails when validated feature manifests still do not align with scanned templates', async () => {
+    const planner = new GenerationPlanner(
+      new InMemoryTemplateScanner({
+        [kitTemplate.rootPath]: [],
+        [featureTemplate.rootPath]: [],
+      }) as never,
+      new OperationSorter(),
+      new ConflictDetector(),
+      new ManifestFileFilter(new FastGlobTemplateFileMatcher()),
+      {
+        validate: () => ({
+          kitManifest: {
+            schemaVersion: 1,
+            type: 'kit',
+            slug: 'base-kit',
+            name: 'Base Kit',
+            description: 'Base kit fixture',
+            supports: [],
+            requires: [],
+            conflictsWith: [],
+            operations: [],
+          },
+          featureManifests: [],
+        }),
+      } as never,
+      new ManifestOperationsExpander(
+        new ManifestOperationBuilder(
+          createManifestOperationHandlers(),
+          new ManifestOperationPathResolver()
+        )
+      )
+    )
+
+    await expect(
+      planner.plan({
+        projectName: 'demo-app',
+        targetDir: '/projects/demo-app',
+        packageManager: 'pnpm',
+        kit: kitFixture,
+        features: [featureFixture],
+        kitTemplate,
+        featureTemplates: [featureTemplate],
+        kitManifest: null,
+        featureManifests: [],
+      } as never)
+    ).rejects.toThrow('Feature manifests must align with selected features')
+  })
+
+  it('uses an empty template root in sources when a feature template entry is missing', async () => {
+    const alignedFeatureManifest: FeatureManifest = {
+      schemaVersion: 1,
+      type: 'feature',
+      slug: 'auth',
+      name: 'Authentication',
+      description: 'Auth feature fixture',
+      supports: ['node'],
+      requires: [],
+      conflictsWith: [],
+      operations: [],
+    }
+
+    const planner = new GenerationPlanner(
+      new InMemoryTemplateScanner({
+        [kitTemplate.rootPath]: [],
+      }) as never,
+      new OperationSorter(),
+      new ConflictDetector(),
+      new ManifestFileFilter(new FastGlobTemplateFileMatcher()),
+      {
+        validate: () => ({
+          kitManifest: {
+            schemaVersion: 1,
+            type: 'kit',
+            slug: 'base-kit',
+            name: 'Base Kit',
+            description: 'Base kit fixture',
+            supports: [],
+            requires: [],
+            conflictsWith: [],
+            operations: [],
+          },
+          featureManifests: [alignedFeatureManifest],
+        }),
+      } as never,
+      new ManifestOperationsExpander(
+        new ManifestOperationBuilder(
+          createManifestOperationHandlers(),
+          new ManifestOperationPathResolver()
+        )
+      )
+    )
+
+    const plan = await planner.plan({
+      projectName: 'demo-app',
+      targetDir: '/projects/demo-app',
+      packageManager: 'pnpm',
+      kit: kitFixture,
+      features: [featureFixture],
+      kitTemplate,
+      featureTemplates: [],
+      kitManifest: null,
+      featureManifests: [alignedFeatureManifest],
+    } as never)
+
+    expect(plan.sources).toEqual([
+      {
+        type: 'kit',
+        slug: 'base-kit',
+        templateRoot: '/templates/base-kit',
+      },
+      {
+        type: 'feature',
+        slug: 'auth',
+        templateRoot: '',
+      },
+    ])
+  })
 })
 
 describe('OperationSorter', () => {
@@ -643,6 +761,35 @@ describe('OperationSorter', () => {
     expect(operations.map((operation) => operation.type)).toEqual([
       'copy-file',
       'ast.add-named-import',
+    ])
+  })
+
+  it('sorts unsupported file operations after ast operations', () => {
+    const sorter = new OperationSorter()
+
+    const operations = sorter.sort([
+      {
+        id: 'skip-1',
+        type: 'skip-file',
+        source: '/templates/auth/notes.txt',
+        reason: 'already handled',
+        origin: { type: 'feature', slug: 'auth' },
+        description: 'Skip notes.txt from auth',
+      },
+      {
+        id: 'ast-1',
+        type: 'ast.add-named-import',
+        target: '/projects/demo-app/src/main.ts',
+        named: 'setupAuth',
+        from: './auth/setup-auth',
+        origin: { type: 'feature', slug: 'auth' },
+        description: 'Apply ast.add-named-import from auth',
+      },
+    ])
+
+    expect(operations.map((operation) => operation.type)).toEqual([
+      'ast.add-named-import',
+      'skip-file',
     ])
   })
 })
@@ -830,5 +977,68 @@ describe('ConflictDetector', () => {
     ])
 
     expect(conflicts).toEqual([])
+  })
+
+  it('ignores operations that do not write to a target path', () => {
+    const detector = new ConflictDetector()
+    const conflicts = detector.detect([
+      {
+        id: 'skip-1',
+        type: 'skip-file',
+        source: '/templates/auth/notes.txt',
+        reason: 'already handled',
+        origin: { type: 'feature', slug: 'auth' },
+        description: 'Skip notes.txt from auth',
+      },
+      {
+        id: 'copy-1',
+        type: 'copy-file',
+        source: '/templates/auth/src/auth.ts',
+        target: '/projects/demo-app/src/auth.ts',
+        overwrite: false,
+        renderVariables: true,
+        origin: { type: 'feature', slug: 'auth' },
+        description: 'Apply copy-file from auth',
+      },
+    ])
+
+    expect(conflicts).toEqual([])
+  })
+
+  it('skips sparse entries when scanning for destructive copy collisions', () => {
+    const detector = new ConflictDetector()
+    const operations = new Array<Parameters<ConflictDetector['detect']>[0][number]>(3)
+    operations[1] = {
+      id: 'append-readme-1',
+      type: 'append-readme',
+      source: '/templates/auth/README.knitto.md',
+      target: '/projects/demo-app/README.md',
+      heading: 'Authentication',
+      origin: { type: 'feature', slug: 'auth' },
+      description: 'Append README notes from auth',
+    }
+    operations[2] = {
+      id: 'copy-1',
+      type: 'copy-file',
+      source: '/templates/auth/README.knitto.md',
+      target: '/projects/demo-app/README.md',
+      overwrite: true,
+      renderVariables: true,
+      origin: { type: 'feature', slug: 'auth' },
+      description: 'Apply copy-file from auth',
+    }
+
+    const findDestructiveCopyCollision = (
+      detector as never as {
+        findDestructiveCopyCollision(
+          operations: Parameters<ConflictDetector['detect']>[0]
+        ): string[] | undefined
+      }
+    ).findDestructiveCopyCollision.bind(detector)
+
+    expect(findDestructiveCopyCollision(operations)).toEqual([
+      'append-readme-1',
+      'copy-1',
+    ])
   })
 })

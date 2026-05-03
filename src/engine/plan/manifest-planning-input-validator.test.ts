@@ -107,4 +107,60 @@ describe('ManifestPlanningInputValidator', () => {
       )
     ).toThrow('Feature manifest order does not match selected features')
   })
+
+  it('fails when feature templates do not align with selected features', () => {
+    expect(() => validator.validate(createInput({ featureTemplates: [] }))).toThrow(
+      'Feature templates must align with selected features'
+    )
+  })
+
+  it('fails when feature manifest count does not align with selected features', () => {
+    expect(() => validator.validate(createInput({ featureManifests: [] }))).toThrow(
+      'Feature manifests must align with selected features'
+    )
+  })
+
+  it('fails when a feature manifest entry is missing from an aligned array', () => {
+    const featureManifests = new Array<FeatureManifest | null>(1)
+
+    expect(() => validator.validate(createInput({ featureManifests }))).toThrow(
+      'Feature manifests must align with selected features'
+    )
+  })
+
+  it('fails when requiring feature manifests and an aligned slot is undefined', () => {
+    const featureManifests = new Array<FeatureManifest | null>(1)
+    const requireFeatureManifests = (
+      validator as never as {
+        requireFeatureManifests(input: PlanInput): FeatureManifest[]
+      }
+    ).requireFeatureManifests.bind(validator)
+
+    expect(() => requireFeatureManifests(createInput({ featureManifests }))).toThrow(
+      'Feature manifests must align with selected features'
+    )
+  })
+
+  it('uses an empty template root when a missing feature manifest has no template entry', () => {
+    const requireFeatureManifests = (
+      validator as never as {
+        requireFeatureManifests(input: PlanInput): FeatureManifest[]
+      }
+    ).requireFeatureManifests.bind(validator)
+
+    expect(() =>
+      requireFeatureManifests(
+        createInput({
+          featureTemplates: [],
+          featureManifests: [null],
+        })
+      )
+    ).toThrowError(
+      expect.objectContaining({
+        name: 'KnittoError',
+        code: Errors.MISSING_TEMPLATE_MANIFEST,
+        message: 'Template manifest missing for feature "auth": knitto.json',
+      })
+    )
+  })
 })

@@ -48,7 +48,8 @@ export async function createProjectPrompt(
     )
 
   const featureSlugs =
-    (defaults.featureSlugs ?? availableFeatures.length > 0)
+    defaults.featureSlugs ??
+    (availableFeatures.length > 0
       ? await checkbox({
           message: 'Optional features',
           choices: availableFeatures.map((feature) => ({
@@ -57,7 +58,7 @@ export async function createProjectPrompt(
             description: feature.description,
           })),
         })
-      : []
+      : [])
 
   const packageManager =
     defaults.packageManager ??

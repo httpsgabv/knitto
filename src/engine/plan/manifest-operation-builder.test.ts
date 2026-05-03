@@ -380,6 +380,74 @@ describe('ManifestOperationBuilder', () => {
     ])
   })
 
+  it('returns no operations when add-all has no template files', () => {
+    expect(
+      builder.buildAll({
+        operation: { type: 'add-all' },
+        templateDir,
+        targetDir,
+        origin,
+      })
+    ).toEqual([])
+  })
+
+  it('uses the origin slug when add-all appends a README without a manifest name', () => {
+    const operations = builder.buildAll({
+      operation: { type: 'add-all' },
+      templateDir,
+      targetDir,
+      origin,
+      templateFiles: [
+        {
+          absolutePath: '/templates/auth/README.knitto.md',
+          relativePath: 'README.knitto.md',
+        },
+      ],
+    })
+
+    expect(operations).toEqual([
+      expect.objectContaining({
+        type: 'append-readme',
+        heading: 'auth',
+      }),
+    ])
+  })
+
+  it('rejects building add-all without expanding it first', () => {
+    expect(() =>
+      builder.build({
+        operation: { type: 'add-all' },
+        templateDir,
+        targetDir,
+        origin,
+      })
+    ).toThrow('add-all must be expanded before building operations')
+  })
+
+  it('fails when no handler is registered for a concrete operation type', () => {
+    const builderWithoutHandlers = new ManifestOperationBuilder(
+      {
+        get: vi.fn().mockReturnValue(undefined),
+      } as never,
+      new ManifestOperationPathResolver()
+    )
+
+    expect(() =>
+      builderWithoutHandlers.build({
+        operation: {
+          type: 'copy-file',
+          source: 'src/auth.ts',
+          target: 'src/auth.ts',
+          overwrite: false,
+          renderVariables: true,
+        },
+        templateDir,
+        targetDir,
+        origin,
+      })
+    ).toThrow('No handler registered for manifest operation type: copy-file')
+  })
+
   it('rejects manifest source paths that escape the template root', () => {
     expect(() =>
       builder.build({

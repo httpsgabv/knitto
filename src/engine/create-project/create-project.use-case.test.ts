@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Catalog } from '@core/catalog/catalog'
 import type { Feature } from '@core/catalog/feature'
 import type { Kit } from '@core/catalog/kit'
+import { Errors } from '@core/errors/errors'
 import type { FeatureManifest, KitManifest } from '@core/manifest/manifest'
 import type { GenerationPlan } from '@core/generation/generation-plan'
 import type { Template } from '@core/template/template'
+import { FakePackageManager } from '@test/adapters/package-manager/fake-package-manager'
 import { CreateProjectUseCase } from './create-project.use-case'
 
 const kitFixture: Kit = {
@@ -191,4 +193,203 @@ describe('CreateProjectUseCase', () => {
       })
     )
   })
+
+  it('returns a dry-run result without composing, installing, or initializing git', async () => {
+    const { useCase, templateComposer, packageManagerResolver, gitClient } = makeSut()
+
+    const result = await useCase.execute(createInput())
+
+    expect(result).toEqual({
+      projectName: 'demo-app',
+      targetDir: '/projects/demo-app',
+      plan: planFixture,
+      executed: false,
+    })
+    expect(templateComposer.compose).not.toHaveBeenCalled()
+    expect(packageManagerResolver.resolve).not.toHaveBeenCalled()
+    expect(gitClient.init).not.toHaveBeenCalled()
+  })
+
+  it('composes the project without post-generation steps when execution toggles are disabled', async () => {
+    const { useCase, templateComposer, packageManagerResolver, gitClient } = makeSut()
+
+    const result = await useCase.execute({
+      ...createInput(),
+      dryRun: false,
+    })
+
+    expect(result).toEqual({
+      projectName: 'demo-app',
+      targetDir: '/projects/demo-app',
+      plan: planFixture,
+      executed: true,
+    })
+    expect(templateComposer.compose).toHaveBeenCalledWith(planFixture)
+    expect(packageManagerResolver.resolve).not.toHaveBeenCalled()
+    expect(gitClient.init).not.toHaveBeenCalled()
+  })
+
+  it('installs dependencies and initializes git when enabled', async () => {
+    const { useCase, packageManagerResolver, packageManager, gitClient } = makeSut()
+
+    await useCase.execute({
+      ...createInput(),
+      dryRun: false,
+      installDependencies: true,
+      initializeGit: true,
+    })
+
+    expect(packageManagerResolver.resolve).toHaveBeenCalledWith('pnpm')
+    expect(packageManager.getInstallCalls()).toEqual([{ cwd: '/projects/demo-app' }])
+    expect(gitClient.init).toHaveBeenCalledWith('/projects/demo-app')
+  })
+
+  it('defaults the target directory to the project name when one is not provided', async () => {
+    const { useCase, generationPlanner, templateComposer } = makeSut()
+
+    const result = await useCase.execute({
+      ...createInput(),
+      targetDir: undefined,
+      dryRun: false,
+    })
+
+    expect(result.targetDir).toBe('/Users/gabriel/Documents/dev/knitto/knitto-create/.worktrees/coverage-100/demo-app')
+    expect(generationPlanner.plan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetDir: '/Users/gabriel/Documents/dev/knitto/knitto-create/.worktrees/coverage-100/demo-app',
+      })
+    )
+    expect(templateComposer.compose).toHaveBeenCalledWith(planFixture)
+  })
+
+  it('throws when the target directory already exists', async () => {
+    const { useCase, catalog } = makeSut({
+      fileSystem: {
+        pathExists: vi.fn().mockResolvedValue(true),
+      },
+    })
+
+    await expect(useCase.execute(createInput())).rejects.toMatchObject({
+      name: 'KnittoError',
+      code: Errors.TARGET_DIR_EXISTS,
+      message: 'Target directory already exists: /projects/demo-app',
+    })
+    expect(catalog.getKit).not.toHaveBeenCalled()
+  })
+
+  it('throws when the generation plan contains conflicts', async () => {
+    const planWithConflicts: GenerationPlan = {
+      ...planFixture,
+      conflicts: [
+        {
+          code: 'DUPLICATE_TARGET',
+          message: 'package.json would be written twice',
+          target: 'package.json',
+          operationIds: ['kit-package-json', 'feature-package-json'],
+        },
+      ],
+    }
+    const { useCase, templateComposer } = makeSut({
+      generationPlanner: {
+        plan: vi.fn().mockResolvedValue(planWithConflicts),
+      },
+    })
+
+    await expect(
+      useCase.execute({
+        ...createInput(),
+        dryRun: false,
+      })
+    ).rejects.toMatchObject({
+      name: 'KnittoError',
+      code: Errors.PLAN_HAS_CONFLICTS,
+      message: 'Generation plan contains conflicts',
+      details: planWithConflicts.conflicts,
+    })
+    expect(templateComposer.compose).not.toHaveBeenCalled()
+  })
+
+  it('throws when fetched feature templates do not align with selected features', async () => {
+    const { useCase, generationPlanner } = makeSut({
+      templateProvider: {
+        fetch: vi.fn().mockResolvedValue(kitTemplate),
+        fetchMany: vi.fn().mockResolvedValue([]),
+      },
+    })
+
+    await expect(useCase.execute(createInput())).rejects.toThrow(
+      'Feature templates must align with selected features'
+    )
+    expect(generationPlanner.plan).not.toHaveBeenCalled()
+  })
 })
+
+function createInput() {
+  return {
+    projectName: 'demo-app',
+    targetDir: '/projects/demo-app',
+    packageManager: 'pnpm' as const,
+    kitSlug: 'base-kit',
+    featureSlugs: ['auth'],
+    installDependencies: false,
+    initializeGit: false,
+    dryRun: true,
+  }
+}
+
+function makeSut(overrides?: {
+  fileSystem?: { pathExists: ReturnType<typeof vi.fn> }
+  generationPlanner?: { plan: ReturnType<typeof vi.fn> }
+  templateProvider?: {
+    fetch: ReturnType<typeof vi.fn>
+    fetchMany: ReturnType<typeof vi.fn>
+  }
+}) {
+  const inputValidator = { validate: vi.fn((input) => input) }
+  const catalog = { getKit: vi.fn(() => kitFixture) }
+  const featureResolver = { resolve: vi.fn(() => [featureFixture]) }
+  const compatibilityChecker = { check: vi.fn() }
+  const templateProvider =
+    overrides?.templateProvider ?? {
+      fetch: vi.fn().mockResolvedValue(kitTemplate),
+      fetchMany: vi.fn().mockResolvedValue([featureTemplate]),
+    }
+  const manifestLoader = {
+    load: vi.fn().mockResolvedValue(null),
+    loadMany: vi.fn().mockResolvedValue([null]),
+  }
+  const generationPlanner =
+    overrides?.generationPlanner ?? {
+      plan: vi.fn().mockResolvedValue(planFixture),
+    }
+  const templateComposer = { compose: vi.fn().mockResolvedValue(undefined) }
+  const packageManager = new FakePackageManager()
+  const packageManagerResolver = { resolve: vi.fn(() => packageManager) }
+  const gitClient = { init: vi.fn().mockResolvedValue(undefined) }
+  const fileSystem =
+    overrides?.fileSystem ?? { pathExists: vi.fn().mockResolvedValue(false) }
+
+  const useCase = new CreateProjectUseCase(
+    inputValidator as never,
+    catalog as unknown as Catalog,
+    featureResolver as never,
+    compatibilityChecker as never,
+    templateProvider as never,
+    manifestLoader as never,
+    generationPlanner as never,
+    templateComposer as never,
+    packageManagerResolver as never,
+    gitClient as never,
+    fileSystem as never
+  )
+
+  return {
+    useCase,
+    catalog,
+    generationPlanner,
+    templateComposer,
+    packageManagerResolver,
+    packageManager,
+    gitClient,
+  }
+}

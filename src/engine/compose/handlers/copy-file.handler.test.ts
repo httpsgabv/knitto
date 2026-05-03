@@ -43,4 +43,39 @@ describe('CopyFileHandler', () => {
       { method: 'writeFile', args: ['/project/docs/README.md', 'Hello Knitto!'] },
     ])
   })
+
+  it('writes the original content when renderVariables is false', async () => {
+    const fileSystem = new FakeFileSystem()
+    fileSystem.addFile('/template/README.md', 'Hello {{name}}!')
+
+    const handler = new CopyFileHandler()
+    const operation: CopyFileOperation = {
+      id: 'op-2',
+      type: 'copy-file',
+      origin: { type: 'kit', slug: 'base' },
+      description: 'copy readme without rendering',
+      source: '/template/README.md',
+      target: '/project/docs/README.md',
+      renderVariables: false,
+      overwrite: true,
+    }
+
+    await handler.execute(operation, {
+      fileSystem,
+      variableRenderer: new VariableRenderer(),
+      packageJsonMerger: {} as never,
+      envMerger: {} as never,
+      readmeMerger: {} as never,
+      sourceFileEditor: new SourceFileEditor(new TsMorphProjectFactory()),
+      importEditor: new ImportEditor(),
+      nestModuleEditor: new NestModuleEditor(),
+      variables: { name: 'Knitto' },
+    })
+
+    expect(fileSystem.getCalls()).toEqual([
+      { method: 'readFile', args: ['/template/README.md', 'utf-8'] },
+      { method: 'ensureDir', args: ['/project/docs'] },
+      { method: 'writeFile', args: ['/project/docs/README.md', 'Hello {{name}}!'] },
+    ])
+  })
 })

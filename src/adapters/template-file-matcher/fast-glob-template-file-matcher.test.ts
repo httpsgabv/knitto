@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { TemplateFile } from '@core/template/template-file'
 import { FastGlobTemplateFileMatcher } from './fast-glob-template-file-matcher'
 
@@ -105,5 +105,149 @@ describe('FastGlobTemplateFileMatcher', () => {
         exclude: [],
       })
     ).toEqual(new Set(['src/page1.ts']))
+  })
+
+  it('returns no matches when the template has no files', () => {
+    const matcher = new FastGlobTemplateFileMatcher()
+
+    expect(
+      matcher.match({
+        files: [],
+        include: ['**/*'],
+        exclude: [],
+      })
+    ).toEqual(new Set())
+  })
+
+  it('matches a template rooted at a directory path', () => {
+    const matcher = new FastGlobTemplateFileMatcher()
+
+    expect(
+      matcher.match({
+        files: [
+          {
+            absolutePath: '/templates/base',
+            relativePath: '',
+          },
+          {
+            absolutePath: '/templates/base/src/main.ts',
+            relativePath: 'src/main.ts',
+          },
+        ],
+        include: ['src/**/*.ts'],
+        exclude: [],
+      })
+    ).toEqual(new Set(['src/main.ts']))
+  })
+
+  it('matches files when the computed root does not end with a slash', () => {
+    const matcher = new FastGlobTemplateFileMatcher()
+
+    expect(
+      matcher.match({
+        files: [
+          {
+            absolutePath: '/virtual-root/src/index.ts',
+            relativePath: '/src/index.ts',
+          },
+        ],
+        include: ['**/*.ts'],
+        exclude: [],
+      })
+    ).toEqual(new Set(['src/index.ts']))
+  })
+
+  it('exposes file-system stats and dirent helpers for fast-glob', () => {
+    const matcher = new FastGlobTemplateFileMatcher() as unknown as {
+      createFileSystemAdapter: (files: TemplateFile[], root: string) => {
+        statSync: (entryPath: string) => {
+          isBlockDevice: () => boolean
+          isCharacterDevice: () => boolean
+          isDirectory: () => boolean
+          isFIFO: () => boolean
+          isFile: () => boolean
+          isSocket: () => boolean
+          isSymbolicLink: () => boolean
+        }
+        lstatSync: (entryPath: string) => {
+          isDirectory: () => boolean
+          isFile: () => boolean
+        }
+        readdirSync: (directoryPath: string) => Array<{
+          name: string
+          isDirectory: () => boolean
+          isFile: () => boolean
+          isSymbolicLink: () => boolean
+        }>
+      }
+    }
+    const adapter = matcher.createFileSystemAdapter(files, '/templates/base')
+
+    const fileStats = adapter.statSync('/templates/base/src/index.ts')
+    const directoryStats = adapter.lstatSync('/templates/base/src')
+    const entries = adapter.readdirSync('/templates/base/src')
+    const testEntry = entries.find((entry) => entry.name === 'index.test.ts')
+
+    expect(fileStats.isFile()).toBe(true)
+    expect(fileStats.isDirectory()).toBe(false)
+    expect(fileStats.isBlockDevice()).toBe(false)
+    expect(fileStats.isCharacterDevice()).toBe(false)
+    expect(fileStats.isFIFO()).toBe(false)
+    expect(fileStats.isSocket()).toBe(false)
+    expect(fileStats.isSymbolicLink()).toBe(false)
+    expect(directoryStats.isDirectory()).toBe(true)
+    expect(directoryStats.isFile()).toBe(false)
+    expect(testEntry?.isFile()).toBe(true)
+    expect(testEntry?.isDirectory()).toBe(false)
+    expect(testEntry?.isSymbolicLink()).toBe(false)
+  })
+
+  it('creates directory entries when addEntry receives a missing directory bucket', () => {
+    const matcher = new FastGlobTemplateFileMatcher() as unknown as {
+      addEntry: (
+        directories: Map<string, Set<string>>,
+        directoryPath: string,
+        entryName: string
+      ) => void
+    }
+    const directories = new Map<string, Set<string>>()
+
+    matcher.addEntry(directories, '/templates/base/src', 'index.ts')
+
+    expect(directories.get('/templates/base/src')).toEqual(new Set(['index.ts']))
+  })
+
+  it('skips adding a file entry when segment splitting yields no file name', () => {
+    const originalSplit = String.prototype.split
+    const split = vi.spyOn(String.prototype, 'split')
+
+    split.mockImplementation(
+      (function (this: string, separator: unknown, limit?: number) {
+        if (this.toString() === '__EMPTY_SEGMENTS__' && separator === '/') {
+          return []
+        }
+
+        return originalSplit.call(this.toString(), separator as never, limit)
+      }) as never
+    )
+
+    const matcher = new FastGlobTemplateFileMatcher() as unknown as {
+      createFileSystemAdapter: (files: TemplateFile[], root: string) => {
+        readdirSync: (directoryPath: string) => Array<{ name: string }>
+      }
+    }
+    const adapter = matcher.createFileSystemAdapter(
+      [
+        {
+          absolutePath: '/templates/base/__EMPTY_SEGMENTS__',
+          relativePath: '__EMPTY_SEGMENTS__',
+        },
+      ],
+      '/templates/base'
+    )
+
+    expect(adapter.readdirSync('/templates/base')).toEqual([])
+
+    split.mockRestore()
   })
 })

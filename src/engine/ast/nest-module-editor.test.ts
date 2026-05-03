@@ -139,6 +139,30 @@ describe('NestModuleEditor', () => {
     })
   })
 
+  it('throws a readable error when @Module metadata is missing', async () => {
+    const filePath = await writeTempSourceFile(
+      ["import { Module } from '@nestjs/common'", '', '@Module()', 'export class AppModule {}', ''].join(
+        '\n'
+      )
+    )
+
+    await expect(
+      editSourceFile(filePath, (sourceFile) => {
+        new NestModuleEditor().ensureModuleImport({
+          sourceFile,
+          namedImport: {
+            name: 'ConfigModule',
+            from: '@nestjs/config',
+          },
+          moduleName: 'ConfigModule',
+        })
+      })
+    ).rejects.toMatchObject({
+      name: 'KnittoError',
+      message: 'Could not find a class decorated with @Module in the source file.',
+    })
+  })
+
   it('throws a readable error when imports metadata is not an array', async () => {
     const filePath = await writeTempSourceFile(
       [

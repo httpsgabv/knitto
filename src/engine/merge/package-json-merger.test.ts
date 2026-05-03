@@ -35,4 +35,93 @@ describe('PackageJsonMerger', () => {
       scripts: {},
     })
   })
+
+  it('merges into an existing package.json without overriding target identity or scripts', async () => {
+    const fileSystem = new FakeFileSystem()
+    const merger = new PackageJsonMerger(fileSystem)
+
+    fileSystem.addFile(
+      '/template/package.json',
+      JSON.stringify({
+        name: 'feature-package',
+        version: '2.0.0',
+        scripts: {
+          build: 'feature-build',
+          lint: 'eslint .',
+        },
+        dependencies: {
+          zod: '^4.0.0',
+          chalk: '^5.0.0',
+        },
+        devDependencies: {
+          vitest: '^4.0.0',
+        },
+        peerDependencies: {
+          react: '^19.0.0',
+        },
+      })
+    )
+    fileSystem.addFile(
+      '/project/package.json',
+      JSON.stringify({
+        name: 'app-project',
+        version: '1.0.0',
+        scripts: {
+          test: 'vitest run',
+          build: 'app-build',
+        },
+        dependencies: {
+          chalk: '^4.0.0',
+          axios: '^1.0.0',
+        },
+        optionalDependencies: {
+          fsevents: '^2.0.0',
+        },
+      })
+    )
+
+    await merger.merge('/template/package.json', '/project/package.json')
+
+    const written = await fileSystem.readJson<Record<string, unknown>>(
+      '/project/package.json'
+    )
+
+    expect(written).toEqual({
+      name: 'app-project',
+      version: '1.0.0',
+      scripts: {
+        build: 'app-build',
+        lint: 'eslint .',
+        test: 'vitest run',
+      },
+      dependencies: {
+        axios: '^1.0.0',
+        chalk: '^5.0.0',
+        zod: '^4.0.0',
+      },
+      devDependencies: {
+        vitest: '^4.0.0',
+      },
+      peerDependencies: {
+        react: '^19.0.0',
+      },
+      optionalDependencies: {
+        fsevents: '^2.0.0',
+      },
+    })
+  })
+
+  it('normalizes null package json inputs to empty objects', async () => {
+    const fileSystem = new FakeFileSystem()
+    const merger = new PackageJsonMerger(fileSystem)
+
+    fileSystem.addFile('/template/package.json', 'null')
+    fileSystem.addFile('/project/package.json', 'null')
+
+    await merger.merge('/template/package.json', '/project/package.json')
+
+    expect(await fileSystem.readJson('/project/package.json')).toEqual({
+      scripts: {},
+    })
+  })
 })
