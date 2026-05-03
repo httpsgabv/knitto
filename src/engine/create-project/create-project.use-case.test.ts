@@ -1,3 +1,4 @@
+import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import type { Catalog } from '@core/catalog/catalog'
 import type { Feature } from '@core/catalog/feature'
@@ -246,6 +247,7 @@ describe('CreateProjectUseCase', () => {
 
   it('defaults the target directory to the project name when one is not provided', async () => {
     const { useCase, generationPlanner, templateComposer } = makeSut()
+    const expectedTargetDir = path.resolve('demo-app')
 
     const result = await useCase.execute({
       ...createInput(),
@@ -253,10 +255,10 @@ describe('CreateProjectUseCase', () => {
       dryRun: false,
     })
 
-    expect(result.targetDir).toBe('/Users/gabriel/Documents/dev/knitto/knitto-create/.worktrees/coverage-100/demo-app')
+    expect(result.targetDir).toBe(expectedTargetDir)
     expect(generationPlanner.plan).toHaveBeenCalledWith(
       expect.objectContaining({
-        targetDir: '/Users/gabriel/Documents/dev/knitto/knitto-create/.worktrees/coverage-100/demo-app',
+        targetDir: expectedTargetDir,
       })
     )
     expect(templateComposer.compose).toHaveBeenCalledWith(planFixture)
