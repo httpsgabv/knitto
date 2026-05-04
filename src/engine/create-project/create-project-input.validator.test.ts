@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ZodError } from 'zod'
-import { KnittoError } from '@core/errors/knitto-error'
 import { Errors } from '@core/errors/errors'
 import { CreateProjectInputValidator } from './create-project-input.validator'
 import { CreateProjectInputSchema } from './create-project-input.schema'

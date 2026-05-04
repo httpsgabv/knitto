@@ -12,6 +12,11 @@ export class FakeFileSystem implements FileSystem {
 
   async pathExists(path: string): Promise<boolean> {
     this.calls.push({ method: 'pathExists', args: [path] })
+
+    if (path.includes('/not-exist-after-clone/')) {
+      return false
+    }
+
     if (this.directories.has(path) || this.files.has(path)) {
       return true
     }

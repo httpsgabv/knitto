@@ -1,14 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { Catalog } from '@core/catalog/catalog'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Feature } from '@core/catalog/feature'
 import type { Kit } from '@core/catalog/kit'
-import {
-  checkbox,
-  confirm,
-  input,
-  select,
-} from '@inquirer/prompts'
+import { checkbox, confirm, input, select } from '@inquirer/prompts'
 import { createProjectPrompt } from './create-project.prompt'
+import { FakeCatalog } from '../../../test/catalog/fake-catalog'
 
 vi.mock('@inquirer/prompts', () => ({
   input: vi.fn(),
@@ -61,13 +56,20 @@ const incompatibleFeature: Feature = {
 }
 
 describe('createProjectPrompt', () => {
+  let catalog: FakeCatalog
+
+  beforeEach(() => {
+    catalog = new FakeCatalog()
+    catalog.addKit(baseKit)
+    catalog.addFeature(authFeature)
+    catalog.addFeature(incompatibleFeature)
+  })
+
   afterEach(() => {
     vi.clearAllMocks()
   })
 
   it('prompts for every interactive answer and derives defaults when none are provided', async () => {
-    const catalog = makeCatalog()
-
     vi.mocked(input).mockResolvedValue('demo-app')
     vi.mocked(select)
       .mockResolvedValueOnce('base-kit')
@@ -103,8 +105,6 @@ describe('createProjectPrompt', () => {
   })
 
   it('returns the fully defaulted answers without prompting', async () => {
-    const catalog = makeCatalog()
-
     const answers = await createProjectPrompt(catalog, {
       projectName: 'demo-app',
       kitSlug: 'base-kit',
@@ -137,7 +137,7 @@ describe('createProjectPrompt', () => {
       ...baseKit,
       compatibleFeatures: [],
     }
-    const catalog = makeCatalog({ kit: kitWithoutFeatures })
+    catalog.setKits([kitWithoutFeatures])
 
     const answers = await createProjectPrompt(catalog, {
       projectName: 'demo-app',
@@ -154,8 +154,6 @@ describe('createProjectPrompt', () => {
   })
 
   it('prompts for feature selection when compatible features are available and no default is provided', async () => {
-    const catalog = makeCatalog()
-
     vi.mocked(checkbox).mockResolvedValue(['auth'])
 
     const answers = await createProjectPrompt(catalog, {
@@ -170,23 +168,3 @@ describe('createProjectPrompt', () => {
     expect(checkbox).toHaveBeenCalledTimes(1)
   })
 })
-
-function makeCatalog(overrides: { kit?: Kit; features?: Feature[] } = {}): Catalog {
-  const kit = overrides.kit ?? baseKit
-  const features = overrides.features ?? [authFeature, incompatibleFeature]
-
-  return {
-    listKits: () => [kit],
-    listFeatures: () => features,
-    getKit: () => kit,
-    getFeature: (slug) => {
-      const feature = features.find((candidate) => candidate.slug === slug)
-
-      if (feature === undefined) {
-        throw new Error(`Unknown feature: ${slug}`)
-      }
-
-      return feature
-    },
-  }
-}

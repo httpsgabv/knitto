@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { GithubTemplateProvider } from './github-template-provider'
 import { FakeFileSystem } from '../../../test/adapters/fs/fake-file-system'
 import { FakeTemplateSourceResolver } from '../../../test/adapters/template-source/fake-template-source-resolver'
@@ -76,26 +76,14 @@ describe('GithubTemplateProvider', () => {
     })
 
     it('should throw error when template path does not exist after clone', async () => {
-      const fakeResolver = {
-        resolve: vi.fn().mockResolvedValue(undefined),
-      }
-      const fsWithoutClone = {
-        pathExists: vi.fn().mockResolvedValue(false),
-        ensureDir: vi.fn().mockResolvedValue(undefined),
-      } as never
-      const providerWithFailingFs = new GithubTemplateProvider(
-        fsWithoutClone,
-        fakeResolver
-      )
-
       const source: TemplateSource = {
         type: 'github',
         repo: 'owner/repo',
-        name: 'my-template',
+        name: '/not-exist-after-clone/',
         path: '/templates/',
       }
 
-      await expect(providerWithFailingFs.fetch(source)).rejects.toThrow(
+      await expect(provider.fetch(source)).rejects.toThrow(
         'Failed to download template from /templates/'
       )
     })

@@ -1,11 +1,13 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { Catalog } from '@core/catalog/catalog'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Kit } from '@core/catalog/kit'
 import type { GenerationPlan } from '@core/generation/generation-plan'
 import ora from 'ora'
 import { createProjectPrompt } from './prompts/create-project.prompt'
 import { printPlan } from './output/print-plan'
 import { printer } from './output/printer'
 import { makeCreateFlow } from './create-flow'
+import { FakeSpinner } from '@test/cli/fake-spinner'
+import { FakeCatalog } from '@test/catalog/fake-catalog'
 
 vi.mock('ora', () => ({
   default: vi.fn(),
@@ -19,13 +21,15 @@ vi.mock('./output/print-plan', () => ({
   printPlan: vi.fn(),
 }))
 
-vi.mock('./output/printer', () => ({
-  printer: {
-    section: vi.fn(),
-    success: vi.fn(),
-    info: vi.fn(),
-  },
-}))
+vi.mock('./output/printer', () => {
+  return {
+    printer: {
+      section: vi.fn(),
+      success: vi.fn(),
+      info: vi.fn(),
+    },
+  }
+})
 
 const planFixture: GenerationPlan = {
   project: {
@@ -51,14 +55,34 @@ const answersFixture = {
   initializeGit: true,
 }
 
+const baseKit: Kit = {
+  name: 'Base Kit',
+  slug: 'base-kit',
+  description: 'Base kit',
+  source: {
+    type: 'github',
+    repo: 'knitto/base-kit',
+    name: 'base-kit',
+    path: '.',
+  },
+  compatibleFeatures: ['auth'],
+}
+
 describe('makeCreateFlow', () => {
+  let catalog: FakeCatalog
+  let spinner: FakeSpinner
+
+  beforeEach(() => {
+    catalog = new FakeCatalog()
+    catalog.addKit(baseKit)
+    spinner = new FakeSpinner()
+  })
+
   afterEach(() => {
     vi.clearAllMocks()
   })
 
   it('prints the executed project output when creation succeeds', async () => {
-    const spinner = makeSpinner()
-    const catalog = {} as Catalog
     const createProjectUseCase = {
       execute: vi.fn().mockResolvedValue({
         executed: true,
@@ -93,7 +117,6 @@ describe('makeCreateFlow', () => {
   })
 
   it('prints the dry-run output when no files are written', async () => {
-    const spinner = makeSpinner()
     const createProjectUseCase = {
       execute: vi.fn().mockResolvedValue({
         executed: false,
@@ -109,7 +132,7 @@ describe('makeCreateFlow', () => {
     vi.mocked(createProjectPrompt).mockResolvedValue(answersFixture)
 
     const runCreateFlow = makeCreateFlow({
-      catalog: {} as Catalog,
+      catalog,
       createProjectUseCase: createProjectUseCase as never,
     })
 
@@ -125,7 +148,6 @@ describe('makeCreateFlow', () => {
   })
 
   it('fails the spinner and rethrows when project creation fails', async () => {
-    const spinner = makeSpinner()
     const error = new Error('boom')
     const createProjectUseCase = {
       execute: vi.fn().mockRejectedValue(error),
@@ -137,7 +159,7 @@ describe('makeCreateFlow', () => {
     vi.mocked(createProjectPrompt).mockResolvedValue(answersFixture)
 
     const runCreateFlow = makeCreateFlow({
-      catalog: {} as Catalog,
+      catalog,
       createProjectUseCase: createProjectUseCase as never,
     })
 
@@ -148,10 +170,3 @@ describe('makeCreateFlow', () => {
     expect(printPlan).not.toHaveBeenCalled()
   })
 })
-
-function makeSpinner() {
-  return {
-    succeed: vi.fn(),
-    fail: vi.fn(),
-  }
-}

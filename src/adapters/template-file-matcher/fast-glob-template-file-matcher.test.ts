@@ -1,8 +1,14 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { TemplateFile } from '@core/template/template-file'
 import { FastGlobTemplateFileMatcher } from './fast-glob-template-file-matcher'
 
 describe('FastGlobTemplateFileMatcher', () => {
+  let matcher: FastGlobTemplateFileMatcher
+
+  beforeEach(() => {
+    matcher = new FastGlobTemplateFileMatcher()
+  })
+
   const files: TemplateFile[] = [
     {
       absolutePath: '/templates/base/knitto.json',
@@ -35,8 +41,6 @@ describe('FastGlobTemplateFileMatcher', () => {
   ]
 
   it('matches include and exclude rules against template files', () => {
-    const matcher = new FastGlobTemplateFileMatcher()
-
     expect(
       matcher.match({
         files,
@@ -56,8 +60,6 @@ describe('FastGlobTemplateFileMatcher', () => {
   })
 
   it('supports default include behavior when include is empty', () => {
-    const matcher = new FastGlobTemplateFileMatcher()
-
     expect(
       matcher.match({
         files,
@@ -76,8 +78,6 @@ describe('FastGlobTemplateFileMatcher', () => {
   })
 
   it('supports brace patterns', () => {
-    const matcher = new FastGlobTemplateFileMatcher()
-
     expect(
       matcher.match({
         files,
@@ -96,8 +96,6 @@ describe('FastGlobTemplateFileMatcher', () => {
   })
 
   it('supports question mark patterns', () => {
-    const matcher = new FastGlobTemplateFileMatcher()
-
     expect(
       matcher.match({
         files,
@@ -108,8 +106,6 @@ describe('FastGlobTemplateFileMatcher', () => {
   })
 
   it('returns no matches when the template has no files', () => {
-    const matcher = new FastGlobTemplateFileMatcher()
-
     expect(
       matcher.match({
         files: [],
@@ -120,8 +116,6 @@ describe('FastGlobTemplateFileMatcher', () => {
   })
 
   it('matches a template rooted at a directory path', () => {
-    const matcher = new FastGlobTemplateFileMatcher()
-
     expect(
       matcher.match({
         files: [
@@ -141,8 +135,6 @@ describe('FastGlobTemplateFileMatcher', () => {
   })
 
   it('matches files when the computed root does not end with a slash', () => {
-    const matcher = new FastGlobTemplateFileMatcher()
-
     expect(
       matcher.match({
         files: [
@@ -158,8 +150,11 @@ describe('FastGlobTemplateFileMatcher', () => {
   })
 
   it('exposes file-system stats and dirent helpers for fast-glob', () => {
-    const matcher = new FastGlobTemplateFileMatcher() as unknown as {
-      createFileSystemAdapter: (files: TemplateFile[], root: string) => {
+    const typedMatcher = matcher as unknown as {
+      createFileSystemAdapter: (
+        files: TemplateFile[],
+        root: string
+      ) => {
         statSync: (entryPath: string) => {
           isBlockDevice: () => boolean
           isCharacterDevice: () => boolean
@@ -181,7 +176,10 @@ describe('FastGlobTemplateFileMatcher', () => {
         }>
       }
     }
-    const adapter = matcher.createFileSystemAdapter(files, '/templates/base')
+    const adapter = typedMatcher.createFileSystemAdapter(
+      files,
+      '/templates/base'
+    )
 
     const fileStats = adapter.statSync('/templates/base/src/index.ts')
     const directoryStats = adapter.lstatSync('/templates/base/src')
@@ -203,7 +201,7 @@ describe('FastGlobTemplateFileMatcher', () => {
   })
 
   it('creates directory entries when addEntry receives a missing directory bucket', () => {
-    const matcher = new FastGlobTemplateFileMatcher() as unknown as {
+    const typedMatcher = matcher as unknown as {
       addEntry: (
         directories: Map<string, Set<string>>,
         directoryPath: string,
@@ -212,31 +210,39 @@ describe('FastGlobTemplateFileMatcher', () => {
     }
     const directories = new Map<string, Set<string>>()
 
-    matcher.addEntry(directories, '/templates/base/src', 'index.ts')
+    typedMatcher.addEntry(directories, '/templates/base/src', 'index.ts')
 
-    expect(directories.get('/templates/base/src')).toEqual(new Set(['index.ts']))
+    expect(directories.get('/templates/base/src')).toEqual(
+      new Set(['index.ts'])
+    )
   })
 
   it('skips adding a file entry when segment splitting yields no file name', () => {
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     const originalSplit = String.prototype.split
     const split = vi.spyOn(String.prototype, 'split')
 
-    split.mockImplementation(
-      (function (this: string, separator: unknown, limit?: number) {
-        if (this.toString() === '__EMPTY_SEGMENTS__' && separator === '/') {
-          return []
-        }
+    split.mockImplementation(function (
+      this: string,
+      separator: unknown,
+      limit?: number
+    ) {
+      if (this.toString() === '__EMPTY_SEGMENTS__' && separator === '/') {
+        return []
+      }
 
-        return originalSplit.call(this.toString(), separator as never, limit)
-      }) as never
-    )
+      return originalSplit.call(this.toString(), separator as never, limit)
+    } as never)
 
-    const matcher = new FastGlobTemplateFileMatcher() as unknown as {
-      createFileSystemAdapter: (files: TemplateFile[], root: string) => {
+    const typedMatcher = matcher as unknown as {
+      createFileSystemAdapter: (
+        files: TemplateFile[],
+        root: string
+      ) => {
         readdirSync: (directoryPath: string) => Array<{ name: string }>
       }
     }
-    const adapter = matcher.createFileSystemAdapter(
+    const adapter = typedMatcher.createFileSystemAdapter(
       [
         {
           absolutePath: '/templates/base/__EMPTY_SEGMENTS__',

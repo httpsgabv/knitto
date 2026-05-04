@@ -31,6 +31,7 @@ export default defineConfig(
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unnecessary-type-assertion': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/unbound-method': 'off',
     },
   },
   {
