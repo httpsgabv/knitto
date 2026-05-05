@@ -218,7 +218,6 @@ describe('FastGlobTemplateFileMatcher', () => {
   })
 
   it('skips adding a file entry when segment splitting yields no file name', () => {
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     const originalSplit = String.prototype.split
     const split = vi.spyOn(String.prototype, 'split')
 

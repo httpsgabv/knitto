@@ -1,11 +1,11 @@
 {
-  "name": "@knitto/create",
+  "name": "create-knitto",
   "version": "0.1.0",
   "description": "Composable project generator powered by kits and features.",
   "type": "module",
   "bin": {
-    "knitto": "./dist/index.js",
-    "knitto-create": "./dist/index.js"
+    "create-knitto": "./dist/index.js",
+    "knitto": "./dist/index.js"
   },
   "files": [
     "dist"
@@ -21,7 +21,9 @@
     "format:check": "prettier --check .",
     "test:unit": "vitest run",
     "test:ui": "vitest --ui",
-    "test:cov": "vitest run --coverage && npx vite preview --outDir ./html"
+    "test:cov": "vitest run --coverage && npx vite preview --outDir ./html",
+    "prepack": "pnpm run build",
+    "prepublishOnly": "pnpm run lint && pnpm run typecheck && pnpm run test:unit"
   },
   "tsup": {
     "entry": [
@@ -34,8 +36,24 @@
     "sourcemap": true,
     "clean": true
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "cli",
+    "scaffold",
+    "scaffolding",
+    "project-generator",
+    "starter-kit",
+    "templates",
+    "typescript"
+  ],
+  "author": "httpsgabv",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/httpsgabv/knitto.git"
+  },
+  "homepage": "https://github.com/httpsgabv/knitto#readme",
+  "bugs": {
+    "url": "https://github.com/httpsgabv/knitto/issues"
+  },
   "license": "ISC",
   "packageManager": "pnpm@10.14.0",
   "devDependencies": {
@@ -48,11 +66,11 @@
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.1",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.5",
+    "@types/fs-extra": "^11.0.4"
   },
   "dependencies": {
     "@inquirer/prompts": "^8.4.2",
-    "@types/fs-extra": "^11.0.4",
     "chalk": "^5.6.2",
     "commander": "^14.0.3",
     "execa": "^9.6.1",

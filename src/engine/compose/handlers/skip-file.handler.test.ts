@@ -8,6 +8,7 @@ describe('SkipFileHandler', () => {
       {},
       {
         get(property) {
+          // eslint-disable-next-line @typescript-eslint/no-base-to-string
           throw new Error(`Unexpected context access: ${String(property)}`)
         },
       }
@@ -22,6 +23,8 @@ describe('SkipFileHandler', () => {
       reason: 'already exists',
     }
 
-    await expect(handler.execute(operation, context as never)).resolves.toBeUndefined()
+    await expect(
+      handler.execute(operation, context as never)
+    ).resolves.toBeUndefined()
   })
 })
