@@ -3,6 +3,7 @@ import { ManifestOperationHandlerRegistry } from '../manifest-operation-handler-
 import { AppendEnvManifestOperationHandler } from './append-env-manifest-operation.handler'
 import { AppendReadmeManifestOperationHandler } from './append-readme-manifest-operation.handler'
 import { AstAddNamedImportManifestOperationHandler } from './ast-add-named-import-manifest-operation.handler'
+import { AstNestAddBootstrapCallManifestOperationHandler } from './ast-nest-add-bootstrap-call-manifest-operation.handler'
 import { AstNestAddModuleImportManifestOperationHandler } from './ast-nest-add-module-import-manifest-operation.handler'
 import { CopyFileManifestOperationHandler } from './copy-file-manifest-operation.handler'
 import { MergePackageJsonManifestOperationHandler } from './merge-package-json-manifest-operation.handler'
@@ -16,6 +17,8 @@ export function createManifestOperationHandlers(): ManifestOperationHandlerRegis
     'ast.add-named-import': new AstAddNamedImportManifestOperationHandler(),
     'ast.nest.add-module-import':
       new AstNestAddModuleImportManifestOperationHandler(),
+    'ast.nest.add-bootstrap-call':
+      new AstNestAddBootstrapCallManifestOperationHandler(),
   }
 
   return new ManifestOperationHandlerRegistry(handlers)

@@ -3,9 +3,9 @@ import type { OperationHandler } from './operation-handler'
 
 type SupportedOperationType = GenerationOperation['type']
 
-export type OperationHandlerRecord = {
+export type OperationHandlerRecord = Partial<{
   [K in SupportedOperationType]: OperationHandler<Extract<GenerationOperation, { type: K }>>
-}
+}>
 
 export class OperationHandlerRegistry {
   private readonly handlers: Map<
@@ -14,12 +14,18 @@ export class OperationHandlerRegistry {
   >
 
   constructor(handlers: OperationHandlerRecord) {
-    this.handlers = new Map(
-      Object.values(handlers).map((handler) => [
+    this.handlers = new Map()
+
+    for (const handler of Object.values(handlers)) {
+      if (!handler) {
+        continue
+      }
+
+      this.handlers.set(
         handler.type,
-        handler as OperationHandler<GenerationOperation>,
-      ])
-    )
+        handler as OperationHandler<GenerationOperation>
+      )
+    }
   }
 
   get<T extends SupportedOperationType>(

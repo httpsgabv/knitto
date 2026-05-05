@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { AstAddNamedImportOperation } from '@core/generation/ast-operation'
 import { ImportEditor } from '@engine/ast/import-editor'
+import { NestBootstrapEditor } from '@engine/ast/nest-bootstrap-editor'
 import { NestModuleEditor } from '@engine/ast/nest-module-editor'
 import { SourceFileEditor } from '@engine/ast/source-file-editor'
 import { TsMorphProjectFactory } from '@engine/ast/ts-morph-project-factory'
@@ -50,6 +51,7 @@ function createContext() {
     sourceFileEditor: new SourceFileEditor(new TsMorphProjectFactory()),
     importEditor: new ImportEditor(),
     nestModuleEditor: new NestModuleEditor(),
+    nestBootstrapEditor: new NestBootstrapEditor(),
     variables: {},
   }
 }

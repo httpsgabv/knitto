@@ -64,5 +64,6 @@ function createBaseContext(): Omit<OperationContext, 'variables'> {
     sourceFileEditor: {} as never,
     importEditor: {} as never,
     nestModuleEditor: {} as never,
+    nestBootstrapEditor: {} as never,
   }
 }

@@ -3,6 +3,7 @@ import { OperationHandlerRegistry } from '../operation-handler-registry'
 import { AppendEnvHandler } from './append-env.handler'
 import { AppendReadmeHandler } from './append-readme.handler'
 import { AstAddNamedImportHandler } from './ast-add-named-import.handler'
+import { AstNestAddBootstrapCallHandler } from './ast-nest-add-bootstrap-call.handler'
 import { AstNestAddModuleImportHandler } from './ast-nest-add-module-import.handler'
 import { CopyFileHandler } from './copy-file.handler'
 import { MergePackageJsonHandler } from './merge-package-json.handler'
@@ -17,6 +18,7 @@ export function createHandlers(): OperationHandlerRegistry {
     'skip-file': new SkipFileHandler(),
     'ast.add-named-import': new AstAddNamedImportHandler(),
     'ast.nest.add-module-import': new AstNestAddModuleImportHandler(),
+    'ast.nest.add-bootstrap-call': new AstNestAddBootstrapCallHandler(),
   }
 
   return new OperationHandlerRegistry(handlers)

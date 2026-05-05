@@ -110,6 +110,18 @@ describe('ManifestOperationBuilder', () => {
             description,
           }),
         },
+        'ast.nest.add-bootstrap-call': {
+          type: 'ast.nest.add-bootstrap-call',
+          build: ({ operation, description, origin, resolveTarget }) => ({
+            id: 'ast-nest-add-bootstrap-call-1',
+            type: 'ast.nest.add-bootstrap-call',
+            target: resolveTarget(operation.target),
+            appVar: operation.appVar,
+            call: operation.call,
+            origin,
+            description,
+          }),
+        },
       }),
       new ManifestOperationPathResolver()
     )
@@ -307,6 +319,74 @@ describe('ManifestOperationBuilder', () => {
       moduleName: 'AppModule',
       origin,
       description: 'Apply ast.nest.add-module-import from auth',
+    })
+  })
+
+  it('builds ast.nest.add-bootstrap-call operations with structured bootstrap expressions', () => {
+    const operation = builder.build({
+      operation: {
+        type: 'ast.nest.add-bootstrap-call',
+        target: 'src/main.ts',
+        appVar: 'app',
+        call: {
+          method: 'useGlobalPipes',
+          arguments: [
+            {
+              kind: 'new',
+              constructor: {
+                kind: 'identifier',
+                name: 'ValidationPipe',
+              },
+              arguments: [
+                {
+                  kind: 'object',
+                  properties: [
+                    {
+                      key: 'transform',
+                      value: { kind: 'boolean', value: true },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+      templateDir,
+      targetDir,
+      origin,
+    })
+
+    expect(operation).toEqual({
+      id: expect.stringMatching(/^ast-nest-add-bootstrap-call-\d+$/),
+      type: 'ast.nest.add-bootstrap-call',
+      target: '/projects/demo/src/main.ts',
+      appVar: 'app',
+      call: {
+        method: 'useGlobalPipes',
+        arguments: [
+          {
+            kind: 'new',
+            constructor: {
+              kind: 'identifier',
+              name: 'ValidationPipe',
+            },
+            arguments: [
+              {
+                kind: 'object',
+                properties: [
+                  {
+                    key: 'transform',
+                    value: { kind: 'boolean', value: true },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      origin,
+      description: 'Apply ast.nest.add-bootstrap-call from auth',
     })
   })
 

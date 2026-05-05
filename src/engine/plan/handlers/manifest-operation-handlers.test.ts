@@ -2,6 +2,7 @@ import type {
   AppendEnvManifestOperation,
   AppendReadmeManifestOperation,
   AstAddNamedImportManifestOperation,
+  AstNestAddBootstrapCallManifestOperation,
   AstNestAddModuleImportManifestOperation,
   CopyFileManifestOperation,
   MergePackageJsonManifestOperation,
@@ -14,6 +15,7 @@ import type {
 import { AppendEnvManifestOperationHandler } from './append-env-manifest-operation.handler'
 import { AppendReadmeManifestOperationHandler } from './append-readme-manifest-operation.handler'
 import { AstAddNamedImportManifestOperationHandler } from './ast-add-named-import-manifest-operation.handler'
+import { AstNestAddBootstrapCallManifestOperationHandler } from './ast-nest-add-bootstrap-call-manifest-operation.handler'
 import { AstNestAddModuleImportManifestOperationHandler } from './ast-nest-add-module-import-manifest-operation.handler'
 import { CopyFileManifestOperationHandler } from './copy-file-manifest-operation.handler'
 import { createManifestOperationHandlers } from './create-manifest-operation-handlers'
@@ -180,6 +182,73 @@ describe('manifest operation handlers', () => {
     })
   })
 
+  it('builds ast.nest.add-bootstrap-call operations', () => {
+    const handler = new AstNestAddBootstrapCallManifestOperationHandler()
+    const result = handler.build(
+      createBuildContext<AstNestAddBootstrapCallManifestOperation>({
+        type: 'ast.nest.add-bootstrap-call',
+        target: 'src/main.ts',
+        appVar: 'app',
+        call: {
+          method: 'useGlobalPipes',
+          arguments: [
+            {
+              kind: 'new',
+              constructor: {
+                kind: 'identifier',
+                name: 'ValidationPipe',
+              },
+              arguments: [
+                {
+                  kind: 'object',
+                  properties: [
+                    {
+                      key: 'transform',
+                      value: { kind: 'boolean', value: true },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      })
+    )
+
+    expect(handler.type).toBe('ast.nest.add-bootstrap-call')
+    expect(result.id).toMatch(/^ast-nest-add-bootstrap-call-\d+$/)
+    expect(result).toMatchObject({
+      type: 'ast.nest.add-bootstrap-call',
+      target: '/target/src/main.ts',
+      appVar: 'app',
+      call: {
+        method: 'useGlobalPipes',
+        arguments: [
+          {
+            kind: 'new',
+            constructor: {
+              kind: 'identifier',
+              name: 'ValidationPipe',
+            },
+            arguments: [
+              {
+                kind: 'object',
+                properties: [
+                  {
+                    key: 'transform',
+                    value: { kind: 'boolean', value: true },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      origin: { type: 'feature', slug: 'auth' },
+      description: 'build ast.nest.add-bootstrap-call',
+    })
+  })
+
   it('registers handlers for every supported manifest operation type', () => {
     const handlers = createManifestOperationHandlers()
 
@@ -192,6 +261,9 @@ describe('manifest operation handlers', () => {
     )
     expect(handlers.get('ast.nest.add-module-import')?.type).toBe(
       'ast.nest.add-module-import'
+    )
+    expect(handlers.get('ast.nest.add-bootstrap-call')?.type).toBe(
+      'ast.nest.add-bootstrap-call'
     )
   })
 })

@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import type { AstNestAddBootstrapCallManifestOperation } from './manifest-operation'
+import { AstNestAddBootstrapCallManifestOperationSchema } from './manifest-operation.schema'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 import { FeatureManifestSchema } from './feature-manifest.schema'
 import { KitManifestSchema } from './kit-manifest.schema'
 import { ManifestOperationSchema } from './manifest-operation.schema'
@@ -167,11 +169,34 @@ describe('ManifestSchema', () => {
         },
         moduleName: 'AuthModule',
       },
+      {
+        type: 'ast.nest.add-bootstrap-call',
+        target: 'src/main.ts',
+        appVar: 'app',
+        call: {
+          method: 'enableCors',
+          arguments: [
+            {
+              kind: 'object',
+              properties: [
+                {
+                  key: 'origin',
+                  value: { kind: 'string', value: '*' },
+                },
+                {
+                  key: 'credentials',
+                  value: { kind: 'boolean', value: true },
+                },
+              ],
+            },
+          ],
+        },
+      },
     ]
 
     const result = operations.map((operation) => ManifestOperationSchema.parse(operation))
 
-    expect(result).toHaveLength(7)
+    expect(result).toHaveLength(8)
     expect(result[0]).toEqual({
       type: 'copy-file',
       source: 'templates/.env.example',
@@ -215,5 +240,100 @@ describe('ManifestSchema', () => {
       },
       moduleName: 'AuthModule',
     })
+    expect(result[7]).toEqual({
+      type: 'ast.nest.add-bootstrap-call',
+      target: 'src/main.ts',
+      appVar: 'app',
+      call: {
+        method: 'enableCors',
+        arguments: [
+          {
+            kind: 'object',
+            properties: [
+              {
+                key: 'origin',
+                value: { kind: 'string', value: '*' },
+              },
+              {
+                key: 'credentials',
+                value: { kind: 'boolean', value: true },
+              },
+            ],
+          },
+        ],
+      },
+    })
+  })
+
+  it('rejects unsupported bootstrap expression kinds', () => {
+    const result = ManifestOperationSchema.safeParse({
+      type: 'ast.nest.add-bootstrap-call',
+      target: 'src/main.ts',
+      appVar: 'app',
+      call: {
+        method: 'use',
+        arguments: [
+          {
+            kind: 'template',
+            value: 'raw code',
+          },
+        ],
+      },
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('preserves concrete bootstrap expression types for parsed operations', () => {
+    const result = AstNestAddBootstrapCallManifestOperationSchema.parse({
+      type: 'ast.nest.add-bootstrap-call',
+      target: 'src/main.ts',
+      appVar: 'app',
+      call: {
+        method: 'useGlobalPipes',
+        arguments: [
+          {
+            kind: 'new',
+            constructor: {
+              kind: 'identifier',
+              name: 'ValidationPipe',
+            },
+            arguments: [
+              {
+                kind: 'object',
+                properties: [
+                  {
+                    key: 'transform',
+                    value: { kind: 'boolean', value: true },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    expectTypeOf(result).toEqualTypeOf<AstNestAddBootstrapCallManifestOperation>()
+  })
+
+  it('rejects invalid identifier-like bootstrap fields at schema validation time', () => {
+    const result = AstNestAddBootstrapCallManifestOperationSchema.safeParse({
+      type: 'ast.nest.add-bootstrap-call',
+      target: 'src/main.ts',
+      appVar: 'app-var',
+      call: {
+        method: 'use-logger',
+        arguments: [
+          {
+            kind: 'member',
+            object: 'bad.object',
+            property: 'good',
+          },
+        ],
+      },
+    })
+
+    expect(result.success).toBe(false)
   })
 })

@@ -8,19 +8,13 @@ import { TigedTemplateSourceResolver } from '@adapters/template-source/tiged-tem
 import { OfficialCatalog } from '@catalog/official-catalog'
 import type { Catalog } from '@core/catalog/catalog'
 import { ImportEditor } from '@engine/ast/import-editor'
+import { NestBootstrapEditor } from '@engine/ast/nest-bootstrap-editor'
 import { NestModuleEditor } from '@engine/ast/nest-module-editor'
 import { SourceFileEditor } from '@engine/ast/source-file-editor'
 import { TsMorphProjectFactory } from '@engine/ast/ts-morph-project-factory'
-import { AppendEnvHandler } from '@engine/compose/handlers/append-env.handler'
-import { AppendReadmeHandler } from '@engine/compose/handlers/append-readme.handler'
-import { AstAddNamedImportHandler } from '@engine/compose/handlers/ast-add-named-import.handler'
-import { AstNestAddModuleImportHandler } from '@engine/compose/handlers/ast-nest-add-module-import.handler'
-import { CopyFileHandler } from '@engine/compose/handlers/copy-file.handler'
-import { MergePackageJsonHandler } from '@engine/compose/handlers/merge-package-json.handler'
-import { SkipFileHandler } from '@engine/compose/handlers/skip-file.handler'
+import { createHandlers } from '@engine/compose/handlers/create-handlers'
 import type { OperationBaseContext } from '@engine/compose/operation-context'
 import { OperationExecutor } from '@engine/compose/operation-executor'
-import { OperationHandlerRegistry } from '@engine/compose/operation-handler-registry'
 import { TemplateComposer } from '@engine/compose/template-composer'
 import { VariableRenderer } from '@engine/compose/variable-renderer'
 import { CreateProjectInputValidator } from '@engine/create-project/create-project-input.validator'
@@ -71,15 +65,8 @@ export function createApp(): App {
   const sourceFileEditor = new SourceFileEditor(tsMorphProjectFactory)
   const importEditor = new ImportEditor()
   const nestModuleEditor = new NestModuleEditor(importEditor)
-  const operationHandlers = new OperationHandlerRegistry({
-    'copy-file': new CopyFileHandler(),
-    'merge-package-json': new MergePackageJsonHandler(),
-    'append-env': new AppendEnvHandler(),
-    'append-readme': new AppendReadmeHandler(),
-    'skip-file': new SkipFileHandler(),
-    'ast.add-named-import': new AstAddNamedImportHandler(),
-    'ast.nest.add-module-import': new AstNestAddModuleImportHandler(),
-  })
+  const nestBootstrapEditor = new NestBootstrapEditor()
+  const operationHandlers = createHandlers()
   const operationBaseContext: OperationBaseContext = {
     fileSystem,
     variableRenderer,
@@ -89,6 +76,7 @@ export function createApp(): App {
     sourceFileEditor,
     importEditor,
     nestModuleEditor,
+    nestBootstrapEditor,
   }
   const operationExecutor = new OperationExecutor(
     operationHandlers,

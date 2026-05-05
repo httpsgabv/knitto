@@ -14,5 +14,8 @@ describe('createHandlers', () => {
     expect(handlers.get('ast.nest.add-module-import')?.type).toBe(
       'ast.nest.add-module-import'
     )
+    expect(handlers.get('ast.nest.add-bootstrap-call')?.type).toBe(
+      'ast.nest.add-bootstrap-call'
+    )
   })
 })

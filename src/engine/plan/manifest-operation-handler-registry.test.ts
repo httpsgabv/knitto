@@ -2,6 +2,7 @@ import type {
   AppendEnvManifestOperation,
   AppendReadmeManifestOperation,
   AstAddNamedImportManifestOperation,
+  AstNestAddBootstrapCallManifestOperation,
   AstNestAddModuleImportManifestOperation,
   CopyFileManifestOperation,
   MergePackageJsonManifestOperation,
@@ -39,6 +40,10 @@ describe('ManifestOperationHandlerRegistry', () => {
         type: 'ast.nest.add-module-import',
         build: () => ({}) as never,
       } satisfies ManifestOperationHandler<AstNestAddModuleImportManifestOperation>,
+      'ast.nest.add-bootstrap-call': {
+        type: 'ast.nest.add-bootstrap-call',
+        build: () => ({}) as never,
+      } satisfies ManifestOperationHandler<AstNestAddBootstrapCallManifestOperation>,
     })
 
     expect(registry.get('copy-file')).toBe(handler)
