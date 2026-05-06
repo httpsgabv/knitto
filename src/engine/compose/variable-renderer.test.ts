@@ -64,47 +64,69 @@ describe('VariableRenderer', () => {
 
   describe('isBinaryFile', () => {
     it('should return true for .png files', () => {
-      expect(renderer.render('image.png', 'binary', {})).toBe('binary')
+      expect(renderer.render('image.png', '{{name}}', { name: 'John' })).toBe(
+        '{{name}}'
+      )
     })
 
     it('should return true for .jpg files', () => {
-      expect(renderer.render('photo.jpg', 'binary', {})).toBe('binary')
+      expect(renderer.render('photo.jpg', '{{name}}', { name: 'John' })).toBe(
+        '{{name}}'
+      )
     })
 
     it('should return true for .jpeg files', () => {
-      expect(renderer.render('photo.jpeg', 'binary', {})).toBe('binary')
+      expect(renderer.render('photo.jpeg', '{{name}}', { name: 'John' })).toBe(
+        '{{name}}'
+      )
     })
 
     it('should return true for .gif files', () => {
-      expect(renderer.render('anim.gif', 'binary', {})).toBe('binary')
+      expect(renderer.render('anim.gif', '{{name}}', { name: 'John' })).toBe(
+        '{{name}}'
+      )
     })
 
     it('should return true for .webp files', () => {
-      expect(renderer.render('image.webp', 'binary', {})).toBe('binary')
+      expect(renderer.render('image.webp', '{{name}}', { name: 'John' })).toBe(
+        '{{name}}'
+      )
     })
 
     it('should return true for .ico files', () => {
-      expect(renderer.render('icon.ico', 'binary', {})).toBe('binary')
+      expect(renderer.render('icon.ico', '{{name}}', { name: 'John' })).toBe(
+        '{{name}}'
+      )
     })
 
     it('should return true for .pdf files', () => {
-      expect(renderer.render('doc.pdf', 'binary', {})).toBe('binary')
+      expect(renderer.render('doc.pdf', '{{name}}', { name: 'John' })).toBe(
+        '{{name}}'
+      )
     })
 
     it('should return true for .zip files', () => {
-      expect(renderer.render('archive.zip', 'binary', {})).toBe('binary')
+      expect(renderer.render('archive.zip', '{{name}}', { name: 'John' })).toBe(
+        '{{name}}'
+      )
     })
 
     it('should return true for .gz files', () => {
-      expect(renderer.render('file.gz', 'binary', {})).toBe('binary')
+      expect(renderer.render('file.gz', '{{name}}', { name: 'John' })).toBe(
+        '{{name}}'
+      )
     })
 
     it('should return true for uppercase extensions', () => {
-      expect(renderer.render('image.PNG', 'binary', {})).toBe('binary')
+      expect(renderer.render('image.PNG', '{{name}}', { name: 'John' })).toBe(
+        '{{name}}'
+      )
     })
 
     it('should return true for mixed case extensions', () => {
-      expect(renderer.render('image.Png', 'binary', {})).toBe('binary')
+      expect(renderer.render('image.Png', '{{name}}', { name: 'John' })).toBe(
+        '{{name}}'
+      )
     })
 
     it('should replace variables in text files', () => {

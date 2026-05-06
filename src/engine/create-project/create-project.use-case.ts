@@ -79,6 +79,8 @@ export class CreateProjectUseCase {
       })
     )) as Array<FeatureManifest | null>
 
+    console.log('teste')
+
     const plan = await this.generationPlanner.plan({
       projectName: data.projectName,
       targetDir,

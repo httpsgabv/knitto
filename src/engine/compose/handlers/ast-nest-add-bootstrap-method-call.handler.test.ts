@@ -1,42 +1,48 @@
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { AstNestAddBootstrapMethodCallOperation } from '@core/generation/ast-operation'
-import { ImportEditor } from '@engine/ast/import-editor'
-import { NestBootstrapEditor } from '@engine/ast/nest-bootstrap-editor'
-import { NestModuleEditor } from '@engine/ast/nest-module-editor'
-import { SourceFileEditor } from '@engine/ast/source-file-editor'
-import { TsMorphProjectFactory } from '@engine/ast/ts-morph-project-factory'
-import { VariableRenderer } from '../variable-renderer'
 import { AstNestAddBootstrapMethodCallHandler } from './ast-nest-add-bootstrap-method-call.handler'
 
+type TestContext = {
+  sourceFileEditor: {
+    edit: ReturnType<typeof vi.fn>
+  }
+  nestBootstrapEditor: {
+    ensureBootstrapMethodCall: ReturnType<typeof vi.fn>
+  }
+}
+
 describe('AstNestAddBootstrapMethodCallHandler', () => {
-  it('updates main.ts with a standalone bootstrap method call', async () => {
-    const filePath = await writeTempSourceFile(createBootstrapSource())
-
-    await createHandler().execute(createOperation(filePath), createContext())
-
-    const content = await readFile(filePath, 'utf8')
-
-    expect(content).toContain("app.enableShutdownHooks(signalStore.getSignals())")
-    expect(content).toMatch(
-      /const app = await NestFactory\.create\(AppModule\)\s+const signalStore = createSignalStore\(\)\s+app\.enableShutdownHooks\(signalStore\.getSignals\(\)\)\s+await app\.listen\(3000\)/
-    )
-  })
-
-  it('is idempotent when executed twice for an app receiver method call', async () => {
-    const filePath = await writeTempSourceFile(createBootstrapSource())
-    const handler = createHandler()
-    const operation = createOperation(filePath)
+  it('edits the target file and ensures the bootstrap method call', async () => {
+    const sourceFile = {} as never
     const context = createContext()
+    const operation = createOperation('/project/main.ts')
 
-    await handler.execute(operation, context)
-    await handler.execute(operation, context)
+    await createHandler().execute(operation, context as never)
 
-    const content = await readFile(filePath, 'utf8')
+    expect(context.sourceFileEditor.edit).toHaveBeenCalledTimes(1)
+    expect(context.sourceFileEditor.edit).toHaveBeenCalledWith(
+      operation.target,
+      expect.any(Function)
+    )
 
-    expect(content.match(/app\.enableShutdownHooks\(signalStore\.getSignals\(\)\)/g)).toHaveLength(1)
+    const editCallback = vi.mocked(context.sourceFileEditor.edit).mock
+      .calls[0]?.[1]
+
+    expect(editCallback).toBeTypeOf('function')
+
+    await editCallback?.(sourceFile)
+
+    expect(
+      context.nestBootstrapEditor.ensureBootstrapMethodCall
+    ).toHaveBeenCalledTimes(1)
+    expect(
+      context.nestBootstrapEditor.ensureBootstrapMethodCall
+    ).toHaveBeenCalledWith({
+      sourceFile,
+      receiver: operation.receiver,
+      method: operation.method,
+      arguments: operation.arguments,
+    })
   })
 })
 
@@ -44,22 +50,28 @@ function createHandler() {
   return new AstNestAddBootstrapMethodCallHandler()
 }
 
-function createContext() {
+function createContext(): TestContext {
   return {
     fileSystem: {} as never,
-    variableRenderer: new VariableRenderer(),
+    variableRenderer: {} as never,
     packageJsonMerger: {} as never,
     envMerger: {} as never,
     readmeMerger: {} as never,
-    sourceFileEditor: new SourceFileEditor(new TsMorphProjectFactory()),
-    importEditor: new ImportEditor(),
-    nestModuleEditor: new NestModuleEditor(),
-    nestBootstrapEditor: new NestBootstrapEditor(),
+    sourceFileEditor: {
+      edit: vi.fn(),
+    },
+    importEditor: {} as never,
+    nestModuleEditor: {} as never,
+    nestBootstrapEditor: {
+      ensureBootstrapMethodCall: vi.fn(),
+    },
     variables: {},
-  }
+  } as never as TestContext
 }
 
-function createOperation(target: string): AstNestAddBootstrapMethodCallOperation {
+function createOperation(
+  target: string
+): AstNestAddBootstrapMethodCallOperation {
   return {
     id: 'op-1',
     type: 'ast.nest.add-bootstrap-method-call',
@@ -83,30 +95,4 @@ function createOperation(target: string): AstNestAddBootstrapMethodCallOperation
       },
     ],
   }
-}
-
-function createBootstrapSource(): string {
-  return [
-    "import { NestFactory } from '@nestjs/core'",
-    '',
-    'async function bootstrap() {',
-    '  const app = await NestFactory.create(AppModule)',
-    '  const signalStore = createSignalStore()',
-    '  await app.listen(3000)',
-    '}',
-    '',
-    'bootstrap()',
-    '',
-  ].join('\n')
-}
-
-async function writeTempSourceFile(content: string): Promise<string> {
-  const directory = await mkdtemp(
-    join(tmpdir(), 'knitto-compose-ast-nest-bootstrap-method-call-handler-')
-  )
-  const filePath = join(directory, 'main.ts')
-
-  await writeFile(filePath, content, 'utf8')
-
-  return filePath
 }

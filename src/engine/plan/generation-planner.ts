@@ -24,6 +24,8 @@ export class GenerationPlanner {
     const { kitManifest, featureManifests } =
       this.manifestPlanningInputValidator.validate(input)
 
+    console.log(featureManifests)
+
     const variables = this.buildVariables(input.projectName)
     const kitFiles = await this.templateScanner.scan(input.kitTemplate)
     const featureFiles = await Promise.all(

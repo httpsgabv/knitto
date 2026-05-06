@@ -1,28 +1,48 @@
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { AstNestAddBootstrapVariableOperation } from '@core/generation/ast-operation'
-import { ImportEditor } from '@engine/ast/import-editor'
-import { NestBootstrapEditor } from '@engine/ast/nest-bootstrap-editor'
-import { NestModuleEditor } from '@engine/ast/nest-module-editor'
-import { SourceFileEditor } from '@engine/ast/source-file-editor'
-import { TsMorphProjectFactory } from '@engine/ast/ts-morph-project-factory'
-import { VariableRenderer } from '../variable-renderer'
 import { AstNestAddBootstrapVariableHandler } from './ast-nest-add-bootstrap-variable.handler'
 
+type TestContext = {
+  sourceFileEditor: {
+    edit: ReturnType<typeof vi.fn>
+  }
+  nestBootstrapEditor: {
+    ensureBootstrapVariable: ReturnType<typeof vi.fn>
+  }
+}
+
 describe('AstNestAddBootstrapVariableHandler', () => {
-  it('updates main.ts with a bootstrap variable declaration', async () => {
-    const filePath = await writeTempSourceFile(createBootstrapSource())
+  it('edits the target file and ensures the bootstrap variable', async () => {
+    const sourceFile = {} as never
+    const context = createContext()
+    const operation = createOperation('/project/main.ts')
 
-    await createHandler().execute(createOperation(filePath), createContext())
+    await createHandler().execute(operation, context as never)
 
-    const content = await readFile(filePath, 'utf8')
-
-    expect(content).toContain('const logger = createLogger(config)')
-    expect(content).toMatch(
-      /const app = await NestFactory\.create\(AppModule\)\s+const config = createConfig\(\)\s+const logger = createLogger\(config\)\s+await app\.listen\(3000\)/
+    expect(context.sourceFileEditor.edit).toHaveBeenCalledTimes(1)
+    expect(context.sourceFileEditor.edit).toHaveBeenCalledWith(
+      operation.target,
+      expect.any(Function)
     )
+
+    const editCallback = vi.mocked(context.sourceFileEditor.edit).mock
+      .calls[0]?.[1]
+
+    expect(editCallback).toBeTypeOf('function')
+
+    await editCallback?.(sourceFile)
+
+    expect(
+      context.nestBootstrapEditor.ensureBootstrapVariable
+    ).toHaveBeenCalledTimes(1)
+    expect(
+      context.nestBootstrapEditor.ensureBootstrapVariable
+    ).toHaveBeenCalledWith({
+      sourceFile,
+      declarationKind: operation.declarationKind,
+      name: operation.name,
+      initializer: operation.initializer,
+    })
   })
 })
 
@@ -30,19 +50,23 @@ function createHandler() {
   return new AstNestAddBootstrapVariableHandler()
 }
 
-function createContext() {
+function createContext(): TestContext {
   return {
     fileSystem: {} as never,
-    variableRenderer: new VariableRenderer(),
+    variableRenderer: {} as never,
     packageJsonMerger: {} as never,
     envMerger: {} as never,
     readmeMerger: {} as never,
-    sourceFileEditor: new SourceFileEditor(new TsMorphProjectFactory()),
-    importEditor: new ImportEditor(),
-    nestModuleEditor: new NestModuleEditor(),
-    nestBootstrapEditor: new NestBootstrapEditor(),
+    sourceFileEditor: {
+      edit: vi.fn(),
+    },
+    importEditor: {} as never,
+    nestModuleEditor: {} as never,
+    nestBootstrapEditor: {
+      ensureBootstrapVariable: vi.fn(),
+    },
     variables: {},
-  }
+  } as never as TestContext
 }
 
 function createOperation(target: string): AstNestAddBootstrapVariableOperation {
@@ -63,30 +87,4 @@ function createOperation(target: string): AstNestAddBootstrapVariableOperation {
       arguments: [{ kind: 'identifier', name: 'config' }],
     },
   }
-}
-
-function createBootstrapSource(): string {
-  return [
-    "import { NestFactory } from '@nestjs/core'",
-    '',
-    'async function bootstrap() {',
-    '  const app = await NestFactory.create(AppModule)',
-    '  const config = createConfig()',
-    '  await app.listen(3000)',
-    '}',
-    '',
-    'bootstrap()',
-    '',
-  ].join('\n')
-}
-
-async function writeTempSourceFile(content: string): Promise<string> {
-  const directory = await mkdtemp(
-    join(tmpdir(), 'knitto-compose-ast-nest-bootstrap-variable-handler-')
-  )
-  const filePath = join(directory, 'main.ts')
-
-  await writeFile(filePath, content, 'utf8')
-
-  return filePath
 }

@@ -9,8 +9,7 @@ import { ManifestOperationPathResolver } from './manifest-operation-path-resolve
 export class ManifestOperationBuilder {
   constructor(
     private readonly handlers: ManifestOperationHandlerRegistry,
-    private readonly pathResolver: ManifestOperationPathResolver =
-      new ManifestOperationPathResolver()
+    private readonly pathResolver: ManifestOperationPathResolver = new ManifestOperationPathResolver()
   ) {}
 
   buildAll(input: {
