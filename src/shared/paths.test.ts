@@ -22,8 +22,8 @@ describe('normalizeSlashes', () => {
     expect(normalizeSlashes('\\')).toBe('/')
   })
 
-  it('should handle multiple consecutive backslashes', () => {
-    expect(normalizeSlashes('path\\\\to\\\\file')).toBe('path/to/file')
+  it('preserves multiple consecutive backslashes as repeated separators', () => {
+    expect(normalizeSlashes('path\\\\to\\\\file')).toBe('path//to//file')
   })
 
   it('should handle Windows-style absolute path', () => {
@@ -52,6 +52,12 @@ describe('normalizeSlashes', () => {
     expect(normalizeSlashes('\\path\\to\\file')).toBe('/path/to/file')
   })
 
+  it('preserves UNC-style leading separators', () => {
+    expect(normalizeSlashes('\\\\server\\share\\demo-app')).toBe(
+      '//server/share/demo-app'
+    )
+  })
+
   it('should handle complex Windows path', () => {
     const input = 'D:\\Projects\\my-app\\src\\components\\Button.tsx'
     const expected = 'D:/Projects/my-app/src/components/Button.tsx'
@@ -69,6 +75,12 @@ describe('normalizeSystemPath', () => {
   it('preserves already normalized system paths', () => {
     expect(normalizeSystemPath('/projects/demo-app/src/main.ts')).toBe(
       '/projects/demo-app/src/main.ts'
+    )
+  })
+
+  it('preserves UNC-style absolute paths', () => {
+    expect(normalizeSystemPath('\\\\server\\share\\demo-app\\src\\main.ts')).toBe(
+      '//server/share/demo-app/src/main.ts'
     )
   })
 })

@@ -269,6 +269,24 @@ describe('CreateProjectUseCase', () => {
     expect(templateComposer.compose).toHaveBeenCalledWith(planFixture)
   })
 
+  it('preserves UNC-style absolute target directories when normalizing explicit input', async () => {
+    const { useCase, generationPlanner } = makeSut()
+    const targetDir = '\\\\server\\share\\demo-app'
+    const expectedTargetDir = '//server/share/demo-app'
+
+    const result = await useCase.execute({
+      ...createInput(),
+      targetDir,
+    })
+
+    expect(result.targetDir).toBe(expectedTargetDir)
+    expect(generationPlanner.plan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetDir: expectedTargetDir,
+      })
+    )
+  })
+
   it('throws when the target directory already exists', async () => {
     const { useCase, catalog } = makeSut({
       fileSystem: {
