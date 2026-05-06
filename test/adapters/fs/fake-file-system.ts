@@ -1,5 +1,9 @@
 import type { FileSystem } from '@adapters/fs/file-system'
 
+function normalizeSlashes(value: string) {
+  return value.replace(/\\+/g, '/')
+}
+
 export interface FakeFileSystemCall {
   method: keyof FileSystem
   args: any[]
@@ -12,20 +16,21 @@ export class FakeFileSystem implements FileSystem {
 
   async pathExists(path: string): Promise<boolean> {
     this.calls.push({ method: 'pathExists', args: [path] })
+    const normalizedPath = normalizeSlashes(path)
 
-    if (path.includes('/not-exist-after-clone/')) {
+    if (normalizedPath.includes('/not-exist-after-clone/')) {
       return false
     }
 
-    if (this.directories.has(path) || this.files.has(path)) {
+    if (
+      this.directories.has(normalizedPath) ||
+      this.files.has(normalizedPath)
+    ) {
       return true
     }
     for (const dir of this.directories) {
-      if (path.startsWith(dir) || path.startsWith(dir.replace(/\\/g, '/'))) {
-        return true
-      }
-      const normalizedDir = dir.replace(/\\/g, '/')
-      if (path.startsWith(normalizedDir)) {
+      const normalizedDir = normalizeSlashes(dir)
+      if (normalizedPath.startsWith(normalizedDir)) {
         return true
       }
     }
@@ -34,12 +39,12 @@ export class FakeFileSystem implements FileSystem {
 
   async ensureDir(path: string): Promise<void> {
     this.calls.push({ method: 'ensureDir', args: [path] })
-    this.directories.add(path)
+    this.directories.add(normalizeSlashes(path))
   }
 
   async readFile(path: string, encoding: BufferEncoding): Promise<string> {
     this.calls.push({ method: 'readFile', args: [path, encoding] })
-    const content = this.files.get(path)
+    const content = this.files.get(normalizeSlashes(path))
     if (content === undefined) {
       throw new Error(`File not found: ${path}`)
     }
@@ -48,12 +53,12 @@ export class FakeFileSystem implements FileSystem {
 
   async writeFile(path: string, content: string): Promise<void> {
     this.calls.push({ method: 'writeFile', args: [path, content] })
-    this.files.set(path, content)
+    this.files.set(normalizeSlashes(path), content)
   }
 
   async readJson<T>(path: string): Promise<T> {
     this.calls.push({ method: 'readJson', args: [path] })
-    const content = this.files.get(path)
+    const content = this.files.get(normalizeSlashes(path))
     if (content === undefined) {
       throw new Error(`File not found: ${path}`)
     }
@@ -62,15 +67,17 @@ export class FakeFileSystem implements FileSystem {
 
   async writeJson(path: string, value: unknown): Promise<void> {
     this.calls.push({ method: 'writeJson', args: [path, value] })
-    this.files.set(path, JSON.stringify(value))
+    this.files.set(normalizeSlashes(path), JSON.stringify(value))
   }
 
   async listFiles(root: string): Promise<string[]> {
     this.calls.push({ method: 'listFiles', args: [root] })
+    const normalizedRoot = normalizeSlashes(root)
     const files: string[] = []
     for (const [filePath] of this.files) {
-      if (filePath.startsWith(root)) {
-        files.push(filePath.slice(root.length + 1))
+      const normalizedFilePath = normalizeSlashes(filePath)
+      if (normalizedFilePath.startsWith(normalizedRoot)) {
+        files.push(normalizedFilePath.slice(normalizedRoot.length + 1))
       }
     }
     return files
