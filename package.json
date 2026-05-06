@@ -19,11 +19,16 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:unit": "vitest run",
+    "test": "vitest run",
     "test:ui": "vitest --ui",
     "test:cov": "vitest run --coverage && npx vite preview --outDir ./html",
     "prepack": "pnpm run build",
-    "prepublishOnly": "pnpm run lint && pnpm run typecheck && pnpm run test:unit"
+    "prepublishOnly": "pnpm run lint && pnpm run typecheck && pnpm run test:unit",
+    "release:check": "pnpm run lint && pnpm run typecheck && pnpm run test:unit && pnpm run build && npm pack --dry-run",
+    "release:patch": "pnpm run release:check && npm version patch",
+    "release:minor": "pnpm run release:check && npm version minor",
+    "release:major": "pnpm run release:check && npm version major",
+    "release:publish": "npm publish"
   },
   "tsup": {
     "entry": [
