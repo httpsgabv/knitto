@@ -111,6 +111,18 @@ describe('NodeFileSystem', () => {
       expect(result).toEqual(['path/to/file.txt', 'another/file.md'])
     })
 
+    it('normalizes Windows-style glob results before returning them', async () => {
+      vi.mocked(fg).mockResolvedValue([
+        'src\\auth\\controller.ts',
+        '.well-known\\config.json',
+      ])
+
+      await expect(fileSystem.listFiles('C:\\repo\\template')).resolves.toEqual([
+        'src/auth/controller.ts',
+        '.well-known/config.json',
+      ])
+    })
+
     it('should return empty array when no files found', async () => {
       vi.mocked(fg).mockResolvedValue([])
 

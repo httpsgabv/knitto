@@ -26,12 +26,13 @@ export class ManifestOperationBuilder {
       return [this.build(input)]
     }
 
+    const explicitSources = new Set(
+      Array.from(input.explicitSources ?? []).map(normalizeRelativePath)
+    )
+
     return (input.templateFiles ?? [])
       .filter(
-        (file) =>
-          !(input.explicitSources ?? new Set()).has(
-            normalizeRelativePath(file.relativePath)
-          )
+        (file) => !explicitSources.has(normalizeRelativePath(file.relativePath))
       )
       .map((file) => {
         if (file.relativePath === 'package.json') {

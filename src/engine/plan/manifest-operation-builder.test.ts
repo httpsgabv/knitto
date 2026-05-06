@@ -568,6 +568,35 @@ describe('ManifestOperationBuilder', () => {
     ])
   })
 
+  it('treats explicit source paths with backslashes as duplicates of template files', () => {
+    const operations = builder.buildAll({
+      operation: {
+        type: 'add-all',
+      },
+      templateDir,
+      targetDir,
+      origin,
+      templateFiles,
+      manifestName,
+      explicitSources: new Set(['src\\auth.ts']),
+    })
+
+    expect(operations).toEqual([
+      expect.objectContaining({
+        type: 'merge-package-json',
+        source: resolveFrom(templateDir, 'package.json'),
+      }),
+      expect.objectContaining({
+        type: 'append-env',
+        source: resolveFrom(templateDir, '.env.example'),
+      }),
+      expect.objectContaining({
+        type: 'append-readme',
+        source: resolveFrom(templateDir, 'README.knitto.md'),
+      }),
+    ])
+  })
+
   it('returns no operations when add-all has no template files', () => {
     expect(
       builder.buildAll({
