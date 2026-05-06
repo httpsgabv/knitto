@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { Errors } from '@core/errors/errors'
 import { KnittoError } from '@core/errors/knitto-error'
+import { normalizeRelativePath, normalizeSystemPath } from '@shared/paths'
 
 export class ManifestOperationPathResolver {
   resolveSource(rootDir: string, manifestPath: string): string {
@@ -16,8 +17,14 @@ export class ManifestOperationPathResolver {
     manifestPath: string,
     label: 'source' | 'target'
   ): string {
-    const resolvedPath = path.resolve(rootDir, manifestPath)
-    const relativePath = path.relative(rootDir, resolvedPath)
+    const normalizedRootDir = normalizeSystemPath(rootDir)
+    const normalizedManifestPath = normalizeRelativePath(manifestPath)
+    const resolvedPath = normalizeSystemPath(
+      path.resolve(normalizedRootDir, normalizedManifestPath)
+    )
+    const relativePath = normalizeRelativePath(
+      path.relative(normalizedRootDir, resolvedPath)
+    )
 
     if (
       relativePath === '' ||
@@ -29,7 +36,12 @@ export class ManifestOperationPathResolver {
     throw new KnittoError(
       `Manifest operation ${label} escapes ${label === 'source' ? 'template root' : 'target directory'}: ${manifestPath}`,
       Errors.INVALID_MANIFEST_OPERATION_PATH,
-      { label, manifestPath, rootDir, resolvedPath }
+      {
+        label,
+        manifestPath,
+        rootDir: normalizedRootDir,
+        resolvedPath,
+      }
     )
   }
 }

@@ -2,6 +2,7 @@ import type { OperationOrigin } from '@core/generation/file-operation'
 import type { GenerationOperation } from '@core/generation/operation'
 import type { ManifestOperation } from '@core/manifest/manifest-operation'
 import type { TemplateFile } from '@core/template/template-file'
+import { normalizeRelativePath } from '@shared/paths'
 import type { ManifestOperationHandlerRegistry } from './manifest-operation-handler-registry'
 import { ManifestOperationPathResolver } from './manifest-operation-path-resolver'
 
@@ -27,7 +28,10 @@ export class ManifestOperationBuilder {
 
     return (input.templateFiles ?? [])
       .filter(
-        (file) => !(input.explicitSources ?? new Set()).has(file.relativePath)
+        (file) =>
+          !(input.explicitSources ?? new Set()).has(
+            normalizeRelativePath(file.relativePath)
+          )
       )
       .map((file) => {
         if (file.relativePath === 'package.json') {

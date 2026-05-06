@@ -1,8 +1,10 @@
+import path from 'node:path'
 import type { Feature } from '@core/catalog/feature'
 import type { Kit } from '@core/catalog/kit'
 import type { FeatureManifest, KitManifest } from '@core/manifest/manifest'
 import type { Template } from '@core/template/template'
 import type { TemplateFile } from '@core/template/template-file'
+import { normalizeSystemPath } from '@shared/paths'
 import { describe, expect, it } from 'vitest'
 import { createManifestOperationHandlers } from './handlers/create-manifest-operation-handlers'
 import { ManifestOperationBuilder } from './manifest-operation-builder'
@@ -54,6 +56,9 @@ const basePlanInput: PlanInput = {
 }
 
 describe('ManifestOperationsExpander', () => {
+  const resolveFrom = (rootDir: string, manifestPath: string) =>
+    normalizeSystemPath(path.resolve(rootDir, manifestPath))
+
   const expander = new ManifestOperationsExpander(
     new ManifestOperationBuilder(
       createManifestOperationHandlers(),
@@ -130,20 +135,20 @@ describe('ManifestOperationsExpander', () => {
     expect(operations).toEqual([
       expect.objectContaining({
         type: 'copy-file',
-        source: '/templates/base-kit/src/main.ts',
-        target: '/projects/demo-app/src/main.ts',
+        source: resolveFrom('/templates/base-kit', 'src/main.ts'),
+        target: resolveFrom('/projects/demo-app', 'src/main.ts'),
         origin: { type: 'kit', slug: 'base-kit' },
       }),
       expect.objectContaining({
         type: 'merge-package-json',
-        source: '/templates/auth/package.json',
-        target: '/projects/demo-app/package.json',
+        source: resolveFrom('/templates/auth', 'package.json'),
+        target: resolveFrom('/projects/demo-app', 'package.json'),
         origin: { type: 'feature', slug: 'auth' },
       }),
       expect.objectContaining({
         type: 'copy-file',
-        source: '/templates/auth/src/auth.ts',
-        target: '/projects/demo-app/src/custom-auth.ts',
+        source: resolveFrom('/templates/auth', 'src/auth.ts'),
+        target: resolveFrom('/projects/demo-app', 'src/custom-auth.ts'),
         origin: { type: 'feature', slug: 'auth' },
       }),
     ])
@@ -202,7 +207,7 @@ describe('ManifestOperationsExpander', () => {
       expect.objectContaining({
         type: 'copy-file',
         source: expect.stringMatching(/src\/auth\.ts$/),
-        target: '/projects/demo-app/src/auth.ts',
+        target: resolveFrom('/projects/demo-app', 'src/auth.ts'),
       }),
     ])
   })
@@ -261,5 +266,66 @@ describe('ManifestOperationsExpander', () => {
     })
 
     expect(operations).toEqual([])
+  })
+
+  it('ignores slash style when excluding explicit sources from add-all', () => {
+    const operations = expander.expand({
+      planInput: {
+        ...basePlanInput,
+        featureTemplates: [{ rootPath: 'C:/templates/auth' }],
+        targetDir: 'C:/projects/demo-app',
+      },
+      kitManifest: {
+        schemaVersion: 1,
+        type: 'kit',
+        slug: 'base-kit',
+        name: 'Base Kit',
+        description: 'Base kit fixture',
+        supports: [],
+        requires: [],
+        conflictsWith: [],
+        operations: [],
+      },
+      featureManifests: [
+        {
+          schemaVersion: 1,
+          type: 'feature',
+          slug: 'auth',
+          name: 'Authentication',
+          description: 'Auth feature fixture',
+          supports: ['node'],
+          requires: [],
+          conflictsWith: [],
+          operations: [
+            { type: 'add-all' },
+            {
+              type: 'copy-file',
+              source: 'src/auth.ts',
+              target: 'src/custom-auth.ts',
+              overwrite: false,
+              renderVariables: true,
+            },
+          ],
+        },
+      ],
+      kitFiles: [],
+      featureFiles: [
+        [
+          {
+            absolutePath: 'C:/templates/auth/src/auth.ts',
+            relativePath: 'src\\auth.ts',
+          },
+        ],
+      ],
+    })
+
+    expect(operations).toEqual([
+      expect.objectContaining({
+        type: 'copy-file',
+        source: 'C:/templates/auth/src/auth.ts',
+        target: 'C:/projects/demo-app/src/custom-auth.ts',
+        origin: { type: 'feature', slug: 'auth' },
+      }),
+    ])
   })
 })

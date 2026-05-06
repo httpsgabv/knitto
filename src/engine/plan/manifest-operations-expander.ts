@@ -6,7 +6,7 @@ import type {
 } from '@core/manifest/manifest'
 import type { Template } from '@core/template/template'
 import type { TemplateFile } from '@core/template/template-file'
-import { normalizeSlashes } from '@shared/paths'
+import { normalizeRelativePath } from '@shared/paths'
 import { ManifestOperationBuilder } from './manifest-operation-builder'
 import type { PlanInput } from './plan-input'
 
@@ -62,7 +62,7 @@ export class ManifestOperationsExpander {
     const explicitSources = new Set(
       input.manifest.operations
         .filter((operation) => 'source' in operation)
-        .map((operation) => normalizeSlashes(operation.source))
+        .map((operation) => normalizeRelativePath(operation.source))
     )
 
     return input.manifest.operations.flatMap((operation) =>

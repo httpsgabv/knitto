@@ -1,6 +1,8 @@
+import path from 'node:path'
 import { Errors } from '@core/errors/errors'
 import type { GenerationOperation } from '@core/generation/operation'
 import type { TemplateFile } from '@core/template/template-file'
+import { normalizeSystemPath } from '@shared/paths'
 import { describe, expect, it, vi } from 'vitest'
 import type { ManifestOperationHandler } from './manifest-operation-handler'
 import { ManifestOperationBuilder } from './manifest-operation-builder'
@@ -12,6 +14,8 @@ describe('ManifestOperationBuilder', () => {
   const templateDir = '/templates/auth'
   const targetDir = '/projects/demo'
   const manifestName = 'Authentication'
+  const resolveFrom = (rootDir: string, manifestPath: string) =>
+    normalizeSystemPath(path.resolve(rootDir, manifestPath))
   const templateFiles: TemplateFile[] = [
     {
       absolutePath: '/templates/auth/package.json',
@@ -211,8 +215,8 @@ describe('ManifestOperationBuilder', () => {
 
     expect(operation).toMatchObject({
       type: 'merge-package-json',
-      source: '/templates/auth/files/package.json',
-      target: '/projects/demo/package.json',
+      source: resolveFrom(templateDir, 'files/package.json'),
+      target: resolveFrom(targetDir, 'package.json'),
       strategy: 'safe-merge',
       origin,
       description: 'Apply merge-package-json from auth',
@@ -235,8 +239,8 @@ describe('ManifestOperationBuilder', () => {
 
     expect(operation).toMatchObject({
       type: 'append-env',
-      source: '/templates/auth/files/.env.example',
-      target: '/projects/demo/.env.example',
+      source: resolveFrom(templateDir, 'files/.env.example'),
+      target: resolveFrom(targetDir, '.env.example'),
       strategy: 'append-missing',
       origin,
       description: 'Apply append-env from auth',
@@ -259,8 +263,8 @@ describe('ManifestOperationBuilder', () => {
 
     expect(operation).toMatchObject({
       type: 'append-readme',
-      source: '/templates/auth/docs/README.auth.md',
-      target: '/projects/demo/README.md',
+      source: resolveFrom(templateDir, 'docs/README.auth.md'),
+      target: resolveFrom(targetDir, 'README.md'),
       heading: 'Authentication',
       origin,
       description: 'Apply append-readme from auth',
@@ -284,8 +288,8 @@ describe('ManifestOperationBuilder', () => {
 
     expect(operation).toMatchObject({
       type: 'copy-file',
-      source: '/templates/auth/src/auth.ts',
-      target: '/projects/demo/src/auth.ts',
+      source: resolveFrom(templateDir, 'src/auth.ts'),
+      target: resolveFrom(targetDir, 'src/auth.ts'),
       overwrite: false,
       renderVariables: true,
       origin,
@@ -310,7 +314,7 @@ describe('ManifestOperationBuilder', () => {
     expect(operation).toEqual({
       id: expect.stringMatching(/^ast-add-named-import-\d+$/),
       type: 'ast.add-named-import',
-      target: '/projects/demo/src/main.ts',
+      target: resolveFrom(targetDir, 'src/main.ts'),
       named: 'setupAuth',
       from: './auth/setup-auth',
       origin,
@@ -337,7 +341,7 @@ describe('ManifestOperationBuilder', () => {
     expect(operation).toEqual({
       id: expect.stringMatching(/^ast-nest-add-module-import-\d+$/),
       type: 'ast.nest.add-module-import',
-      target: '/projects/demo/src/app.module.ts',
+      target: resolveFrom(targetDir, 'src/app.module.ts'),
       namedImport: {
         name: 'AuthModule',
         from: './auth/auth.module',
@@ -386,7 +390,7 @@ describe('ManifestOperationBuilder', () => {
     expect(operation).toEqual({
       id: expect.stringMatching(/^ast-nest-add-bootstrap-call-\d+$/),
       type: 'ast.nest.add-bootstrap-call',
-      target: '/projects/demo/src/main.ts',
+      target: resolveFrom(targetDir, 'src/main.ts'),
       appVar: 'app',
       call: {
         method: 'useGlobalPipes',
@@ -440,7 +444,7 @@ describe('ManifestOperationBuilder', () => {
     expect(operation).toEqual({
       id: expect.stringMatching(/^ast-nest-add-bootstrap-variable-\d+$/),
       type: 'ast.nest.add-bootstrap-variable',
-      target: '/projects/demo/src/main.ts',
+      target: resolveFrom(targetDir, 'src/main.ts'),
       declarationKind: 'const',
       name: 'xpto',
       initializer: {
@@ -479,7 +483,7 @@ describe('ManifestOperationBuilder', () => {
     expect(operation).toEqual({
       id: expect.stringMatching(/^ast-nest-add-bootstrap-method-call-\d+$/),
       type: 'ast.nest.add-bootstrap-method-call',
-      target: '/projects/demo/src/main.ts',
+      target: resolveFrom(targetDir, 'src/main.ts'),
       receiver: {
         kind: 'identifier',
         name: 'xpto',
@@ -509,26 +513,26 @@ describe('ManifestOperationBuilder', () => {
     expect(operations).toEqual([
       expect.objectContaining({
         type: 'merge-package-json',
-        source: '/templates/auth/package.json',
-        target: '/projects/demo/package.json',
+        source: resolveFrom(templateDir, 'package.json'),
+        target: resolveFrom(targetDir, 'package.json'),
         strategy: 'safe-merge',
       }),
       expect.objectContaining({
         type: 'append-env',
-        source: '/templates/auth/.env.example',
-        target: '/projects/demo/.env.example',
+        source: resolveFrom(templateDir, '.env.example'),
+        target: resolveFrom(targetDir, '.env.example'),
         strategy: 'append-missing',
       }),
       expect.objectContaining({
         type: 'append-readme',
-        source: '/templates/auth/README.knitto.md',
-        target: '/projects/demo/README.md',
+        source: resolveFrom(templateDir, 'README.knitto.md'),
+        target: resolveFrom(targetDir, 'README.md'),
         heading: 'Authentication',
       }),
       expect.objectContaining({
         type: 'copy-file',
-        source: '/templates/auth/src/auth.ts',
-        target: '/projects/demo/src/auth.ts',
+        source: resolveFrom(templateDir, 'src/auth.ts'),
+        target: resolveFrom(targetDir, 'src/auth.ts'),
         overwrite: false,
         renderVariables: true,
       }),
@@ -551,15 +555,15 @@ describe('ManifestOperationBuilder', () => {
     expect(operations).toEqual([
       expect.objectContaining({
         type: 'append-env',
-        source: '/templates/auth/.env.example',
+        source: resolveFrom(templateDir, '.env.example'),
       }),
       expect.objectContaining({
         type: 'append-readme',
-        source: '/templates/auth/README.knitto.md',
+        source: resolveFrom(templateDir, 'README.knitto.md'),
       }),
       expect.objectContaining({
         type: 'copy-file',
-        source: '/templates/auth/src/auth.ts',
+        source: resolveFrom(templateDir, 'src/auth.ts'),
       }),
     ])
   })
