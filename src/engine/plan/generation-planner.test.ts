@@ -1,3 +1,4 @@
+import path from 'node:path'
 import type { Feature } from '@core/catalog/feature'
 import type { Kit } from '@core/catalog/kit'
 import { Errors } from '@core/errors/errors'
@@ -6,6 +7,7 @@ import type { CopyFileOperation } from '@core/generation/file-operation'
 import type { FeatureManifest, KitManifest } from '@core/manifest/manifest'
 import type { Template } from '@core/template/template'
 import type { TemplateFile } from '@core/template/template-file'
+import { normalizeSystemPath } from '@shared/paths'
 import { describe, expect, it } from 'vitest'
 import { FastGlobTemplateFileMatcher } from '@adapters/template-file-matcher/fast-glob-template-file-matcher'
 import { ConflictDetector } from './conflict-detector'
@@ -74,6 +76,11 @@ function createPlanner(filesByTemplateRoot: Record<string, TemplateFile[]>) {
 }
 
 describe('GenerationPlanner', () => {
+  const manifestPathFor = (templateRoot: string) =>
+    normalizeSystemPath(path.join(templateRoot, 'knitto.json'))
+  const resolveFrom = (rootDir: string, manifestPath: string) =>
+    normalizeSystemPath(path.resolve(rootDir, manifestPath))
+
   it('fails when the kit template is missing knitto.json', async () => {
     const planner = createPlanner({
       [kitTemplate.rootPath]: [
@@ -98,10 +105,44 @@ describe('GenerationPlanner', () => {
         featureManifests: [],
       } as never)
     ).rejects.toThrowError(
+        expect.objectContaining({
+          name: 'KnittoError',
+          code: Errors.MISSING_TEMPLATE_MANIFEST,
+          message: `Template manifest missing for kit "base-kit": ${manifestPathFor('/templates/base-kit')}`,
+        })
+      )
+  })
+
+  it('normalizes windows kit missing-manifest paths end-to-end', async () => {
+    const windowsKitTemplate: Template = { rootPath: 'C:\\templates\\base-kit' }
+    const planner = createPlanner({
+      [windowsKitTemplate.rootPath]: [
+        {
+          absolutePath: 'C:/templates/base-kit/src/main.ts',
+          relativePath: 'src/main.ts',
+        },
+      ],
+      [featureTemplate.rootPath]: [],
+    })
+
+    await expect(
+      planner.plan({
+        projectName: 'demo-app',
+        targetDir: '/projects/demo-app',
+        packageManager: 'pnpm',
+        kit: kitFixture,
+        features: [],
+        kitTemplate: windowsKitTemplate,
+        featureTemplates: [],
+        kitManifest: null,
+        featureManifests: [],
+      } as never)
+    ).rejects.toThrowError(
       expect.objectContaining({
         name: 'KnittoError',
         code: Errors.MISSING_TEMPLATE_MANIFEST,
-        message: 'Template manifest missing for kit "base-kit": /templates/base-kit/knitto.json',
+        message:
+          'Template manifest missing for kit "base-kit": C:/templates/base-kit/knitto.json',
       })
     )
   })
@@ -142,12 +183,12 @@ describe('GenerationPlanner', () => {
         featureManifests: [null],
       } as never)
     ).rejects.toThrowError(
-      expect.objectContaining({
-        name: 'KnittoError',
-        code: Errors.MISSING_TEMPLATE_MANIFEST,
-        message: 'Template manifest missing for feature "auth": /templates/auth/knitto.json',
-      })
-    )
+        expect.objectContaining({
+          name: 'KnittoError',
+          code: Errors.MISSING_TEMPLATE_MANIFEST,
+          message: `Template manifest missing for feature "auth": ${manifestPathFor('/templates/auth')}`,
+        })
+      )
   })
 
   it('plans only manifest operations', async () => {
@@ -220,13 +261,13 @@ describe('GenerationPlanner', () => {
     expect(plan.operations).toEqual([
       expect.objectContaining({
         type: 'copy-file',
-        source: '/templates/base-kit/src/main.ts',
-        target: '/projects/demo-app/src/main.ts',
+        source: resolveFrom('/templates/base-kit', 'src/main.ts'),
+        target: resolveFrom('/projects/demo-app', 'src/main.ts'),
         origin: { type: 'kit', slug: 'base-kit' },
       }),
       expect.objectContaining({
         type: 'ast.add-named-import',
-        target: '/projects/demo-app/src/main.ts',
+        target: resolveFrom('/projects/demo-app', 'src/main.ts'),
         named: 'setupAuth',
         from: './auth/setup-auth',
         origin: { type: 'feature', slug: 'auth' },
@@ -236,8 +277,8 @@ describe('GenerationPlanner', () => {
       expect.arrayContaining([
         expect.objectContaining({
           type: 'copy-file',
-          source: '/templates/auth/src/auth.ts',
-          target: '/projects/demo-app/src/auth.ts',
+          source: resolveFrom('/templates/auth', 'src/auth.ts'),
+          target: resolveFrom('/projects/demo-app', 'src/auth.ts'),
         }),
       ])
     )
@@ -293,8 +334,8 @@ describe('GenerationPlanner', () => {
     expect(plan.operations).toEqual([
       expect.objectContaining({
         type: 'copy-file',
-        source: '/templates/base-kit/src/main.ts',
-        target: '/projects/demo-app/src/main.ts',
+        source: resolveFrom('/templates/base-kit', 'src/main.ts'),
+        target: resolveFrom('/projects/demo-app', 'src/main.ts'),
       }),
     ])
   })
@@ -365,24 +406,24 @@ describe('GenerationPlanner', () => {
     expect(plan.operations).toEqual([
       expect.objectContaining({
         type: 'merge-package-json',
-        source: '/templates/auth/package.json',
-        target: '/projects/demo-app/package.json',
+        source: resolveFrom('/templates/auth', 'package.json'),
+        target: resolveFrom('/projects/demo-app', 'package.json'),
       }),
       expect.objectContaining({
         type: 'append-env',
-        source: '/templates/auth/.env.example',
-        target: '/projects/demo-app/.env.example',
+        source: resolveFrom('/templates/auth', '.env.example'),
+        target: resolveFrom('/projects/demo-app', '.env.example'),
       }),
       expect.objectContaining({
         type: 'append-readme',
-        source: '/templates/auth/README.knitto.md',
-        target: '/projects/demo-app/README.md',
+        source: resolveFrom('/templates/auth', 'README.knitto.md'),
+        target: resolveFrom('/projects/demo-app', 'README.md'),
         heading: 'Authentication',
       }),
       expect.objectContaining({
         type: 'copy-file',
-        source: '/templates/auth/src/auth.ts',
-        target: '/projects/demo-app/src/auth.ts',
+        source: resolveFrom('/templates/auth', 'src/auth.ts'),
+        target: resolveFrom('/projects/demo-app', 'src/auth.ts'),
       }),
     ])
   })
@@ -450,13 +491,13 @@ describe('GenerationPlanner', () => {
     expect(plan.operations).toEqual([
       expect.objectContaining({
         type: 'merge-package-json',
-        source: '/templates/auth/package.json',
-        target: '/projects/demo-app/package.json',
+        source: resolveFrom('/templates/auth', 'package.json'),
+        target: resolveFrom('/projects/demo-app', 'package.json'),
       }),
       expect.objectContaining({
         type: 'copy-file',
-        source: '/templates/auth/src/auth.ts',
-        target: '/projects/demo-app/src/custom-auth.ts',
+        source: resolveFrom('/templates/auth', 'src/auth.ts'),
+        target: resolveFrom('/projects/demo-app', 'src/custom-auth.ts'),
       }),
     ])
   })
@@ -577,7 +618,7 @@ describe('GenerationPlanner', () => {
     expect(plan.conflicts).toEqual([
       expect.objectContaining({
         code: 'DUPLICATE_UNSAFE_WRITE',
-        target: '/projects/demo-app/src/auth.ts',
+        target: resolveFrom('/projects/demo-app', 'src/auth.ts'),
       }),
     ])
   })

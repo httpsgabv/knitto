@@ -1,8 +1,10 @@
+import path from 'node:path'
 import type { Feature } from '@core/catalog/feature'
 import type { Kit } from '@core/catalog/kit'
 import { Errors } from '@core/errors/errors'
 import type { FeatureManifest, KitManifest } from '@core/manifest/manifest'
 import type { Template } from '@core/template/template'
+import { normalizeSystemPath } from '@shared/paths'
 import { describe, expect, it } from 'vitest'
 import { ManifestPlanningInputValidator } from './manifest-planning-input-validator'
 import type { PlanInput } from './plan-input'
@@ -79,6 +81,8 @@ function createInput(overrides: Partial<PlanInput> = {}): PlanInput {
 
 describe('ManifestPlanningInputValidator', () => {
   const validator = new ManifestPlanningInputValidator()
+  const manifestPathFor = (templateRoot: string) =>
+    normalizeSystemPath(path.join(templateRoot, 'knitto.json'))
 
   it('returns validated manifests when inputs are aligned', () => {
     expect(validator.validate(createInput())).toEqual({
@@ -92,8 +96,25 @@ describe('ManifestPlanningInputValidator', () => {
       expect.objectContaining({
         name: 'KnittoError',
         code: Errors.MISSING_TEMPLATE_MANIFEST,
+        message: `Template manifest missing for kit "base-kit": ${manifestPathFor('/templates/base-kit')}`,
+      })
+    )
+  })
+
+  it('normalizes windows kit missing-manifest paths', () => {
+    expect(() =>
+      validator.validate(
+        createInput({
+          kitTemplate: { rootPath: 'C:\\templates\\base-kit' },
+          kitManifest: null,
+        })
+      )
+    ).toThrowError(
+      expect.objectContaining({
+        name: 'KnittoError',
+        code: Errors.MISSING_TEMPLATE_MANIFEST,
         message:
-          'Template manifest missing for kit "base-kit": /templates/base-kit/knitto.json',
+          'Template manifest missing for kit "base-kit": C:/templates/base-kit/knitto.json',
       })
     )
   })
