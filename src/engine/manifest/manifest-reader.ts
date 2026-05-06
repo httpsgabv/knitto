@@ -1,13 +1,13 @@
-import path from 'node:path'
 import type { FileSystem } from '@adapters/fs/file-system'
 import { Errors } from '@core/errors/errors'
 import { KnittoError } from '@core/errors/knitto-error'
+import { joinSystemPath } from '@shared/paths'
 
 export class ManifestReader {
   constructor(private readonly fileSystem: FileSystem) {}
 
   async read(templateRoot: string): Promise<null | Record<string, unknown>> {
-    const manifestPath = path.join(templateRoot, 'knitto.json')
+    const manifestPath = joinSystemPath(templateRoot, 'knitto.json')
 
     if (!(await this.fileSystem.pathExists(manifestPath))) {
       return null

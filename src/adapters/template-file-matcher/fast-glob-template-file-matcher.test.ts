@@ -213,6 +213,25 @@ describe('FastGlobTemplateFileMatcher', () => {
     resolve.mockRestore()
   })
 
+  it('matches files when absolute template paths use a UNC root', () => {
+    expect(
+      matcher.match({
+        files: [
+          {
+            absolutePath: '//server/share/base/src/main.ts',
+            relativePath: 'src/main.ts',
+          },
+          {
+            absolutePath: '//server/share/base/src/main.test.ts',
+            relativePath: 'src/main.test.ts',
+          },
+        ],
+        include: ['src/**/*.ts'],
+        exclude: ['src/**/*.test.ts'],
+      })
+    ).toEqual(new Set(['src/main.ts']))
+  })
+
   it('exposes file-system stats and dirent helpers for fast-glob', () => {
     const typedMatcher = matcher as unknown as {
       createFileSystemAdapter: (
@@ -262,6 +281,34 @@ describe('FastGlobTemplateFileMatcher', () => {
     expect(testEntry?.isFile()).toBe(true)
     expect(testEntry?.isDirectory()).toBe(false)
     expect(testEntry?.isSymbolicLink()).toBe(false)
+  })
+
+  it('preserves UNC roots in file-system adapter directory entries', () => {
+    const typedMatcher = matcher as unknown as {
+      createFileSystemAdapter: (
+        files: TemplateFile[],
+        root: string
+      ) => {
+        readdirSync: (directoryPath: string) => Array<{ name: string }>
+        statSync: (entryPath: string) => { isFile: () => boolean }
+      }
+    }
+    const adapter = typedMatcher.createFileSystemAdapter(
+      [
+        {
+          absolutePath: '//server/share/base/src/index.ts',
+          relativePath: 'src/index.ts',
+        },
+      ],
+      '//server/share/base'
+    )
+
+    expect(adapter.readdirSync('//server/share/base/src')).toEqual([
+      expect.objectContaining({ name: 'index.ts' }),
+    ])
+    expect(adapter.statSync('//server/share/base/src/index.ts').isFile()).toBe(
+      true
+    )
   })
 
   it('creates directory entries when addEntry receives a missing directory bucket', () => {

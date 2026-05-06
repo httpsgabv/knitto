@@ -26,6 +26,21 @@ describe('ManifestReader', () => {
     })
   })
 
+  it('reads manifests from UNC template roots', async () => {
+    const fileSystem = new FakeFileSystem()
+    fileSystem.addFile(
+      '//server/share/base/knitto.json',
+      JSON.stringify({ schemaVersion: 1, type: 'kit', slug: 'base' })
+    )
+    const reader = new ManifestReader(fileSystem)
+
+    await expect(reader.read('\\\\server\\share\\base')).resolves.toEqual({
+      schemaVersion: 1,
+      type: 'kit',
+      slug: 'base',
+    })
+  })
+
   it('translates malformed json into a KnittoError', async () => {
     const fileSystem = new FakeFileSystem()
     fileSystem.addFile('/templates/base/knitto.json', '{ invalid json')

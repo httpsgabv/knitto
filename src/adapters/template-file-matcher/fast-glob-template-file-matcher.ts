@@ -1,9 +1,9 @@
 import fg from 'fast-glob'
 import type { Dirent, Stats } from 'node:fs'
-import path from 'node:path'
 import type { TemplateFile } from '@core/template/template-file'
 import type { TemplateFileMatcher } from '@adapters/template-file-matcher/template-file-matcher'
 import {
+  joinSystemPath,
   normalizeRelativePath,
   normalizeSystemPath,
 } from '@shared/paths'
@@ -60,18 +60,14 @@ export class FastGlobTemplateFileMatcher implements TemplateFileMatcher {
         continue
       }
 
-      const absolutePath = normalizeSystemPath(
-        path.posix.join(normalizedRoot, relativePath)
-      )
+      const absolutePath = joinSystemPath(normalizedRoot, relativePath)
       filePaths.add(absolutePath)
 
       const segments = relativePath.split('/')
       let currentDirectory = normalizedRoot
 
       for (const segment of segments.slice(0, -1)) {
-        const nextDirectory = normalizeSystemPath(
-          path.posix.join(currentDirectory, segment)
-        )
+        const nextDirectory = joinSystemPath(currentDirectory, segment)
         this.addEntry(directories, currentDirectory, segment)
         directories.set(
           nextDirectory,
@@ -99,9 +95,7 @@ export class FastGlobTemplateFileMatcher implements TemplateFileMatcher {
         const entries = [...(directories.get(normalizedDirectoryPath) ?? new Set())]
 
         return entries.map((entry) => {
-          const fullPath = normalizeSystemPath(
-            path.posix.join(normalizedDirectoryPath, entry)
-          )
+          const fullPath = joinSystemPath(normalizedDirectoryPath, entry)
           const isDirectory = directories.has(fullPath)
 
           return {
@@ -175,9 +169,7 @@ export class FastGlobTemplateFileMatcher implements TemplateFileMatcher {
       return this.rebaseToVirtualRoot(normalizedEntryPath, root)
     }
 
-    return normalizeSystemPath(
-      path.posix.join(root, normalizeRelativePath(normalizedEntryPath))
-    )
+    return joinSystemPath(root, normalizeRelativePath(normalizedEntryPath))
   }
 
   private normalizeRootPath(root: string): string {
