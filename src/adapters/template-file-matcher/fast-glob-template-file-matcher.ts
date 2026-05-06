@@ -3,7 +3,10 @@ import type { Dirent, Stats } from 'node:fs'
 import path from 'node:path'
 import type { TemplateFile } from '@core/template/template-file'
 import type { TemplateFileMatcher } from '@adapters/template-file-matcher/template-file-matcher'
-import { normalizeSlashes } from '@shared/paths'
+import {
+  normalizeRelativePath,
+  normalizeSystemPath,
+} from '@shared/paths'
 
 export class FastGlobTemplateFileMatcher implements TemplateFileMatcher {
   match(input: {
@@ -29,8 +32,8 @@ export class FastGlobTemplateFileMatcher implements TemplateFileMatcher {
       return '.'
     }
 
-    const absolutePath = normalizeSlashes(file.absolutePath)
-    const relativePath = normalizeSlashes(file.relativePath)
+    const absolutePath = normalizeSystemPath(file.absolutePath)
+    const relativePath = normalizeRelativePath(file.relativePath)
 
     if (relativePath.length === 0) {
       return absolutePath
@@ -45,21 +48,28 @@ export class FastGlobTemplateFileMatcher implements TemplateFileMatcher {
   }
 
   private createFileSystemAdapter(files: TemplateFile[], root: string) {
+    const normalizedRoot = this.normalizeRootPath(root)
     const directories = new Map<string, Set<string>>()
     const filePaths = new Set<string>()
 
-    directories.set(root, new Set())
+    directories.set(normalizedRoot, new Set())
 
     for (const file of files) {
-      const relativePath = normalizeSlashes(file.relativePath)
-      const absolutePath = normalizeSlashes(path.posix.join(root, relativePath))
+      const relativePath = normalizeRelativePath(file.relativePath)
+      if (relativePath.length === 0) {
+        continue
+      }
+
+      const absolutePath = normalizeSystemPath(
+        path.posix.join(normalizedRoot, relativePath)
+      )
       filePaths.add(absolutePath)
 
       const segments = relativePath.split('/')
-      let currentDirectory = root
+      let currentDirectory = normalizedRoot
 
       for (const segment of segments.slice(0, -1)) {
-        const nextDirectory = normalizeSlashes(
+        const nextDirectory = normalizeSystemPath(
           path.posix.join(currentDirectory, segment)
         )
         this.addEntry(directories, currentDirectory, segment)
@@ -78,17 +88,19 @@ export class FastGlobTemplateFileMatcher implements TemplateFileMatcher {
 
     return {
       lstatSync: (entryPath: string) =>
-        this.createStats(entryPath, directories, filePaths),
+        this.createStats(entryPath, normalizedRoot, directories, filePaths),
       statSync: (entryPath: string) =>
-        this.createStats(entryPath, directories, filePaths),
+        this.createStats(entryPath, normalizedRoot, directories, filePaths),
       readdirSync: (directoryPath: string) => {
-        const entries = [
-          ...(directories.get(normalizeSlashes(directoryPath)) ?? new Set()),
-        ]
+        const normalizedDirectoryPath = this.resolveAdapterPath(
+          directoryPath,
+          normalizedRoot
+        )
+        const entries = [...(directories.get(normalizedDirectoryPath) ?? new Set())]
 
         return entries.map((entry) => {
-          const fullPath = normalizeSlashes(
-            path.posix.join(directoryPath, entry)
+          const fullPath = normalizeSystemPath(
+            path.posix.join(normalizedDirectoryPath, entry)
           )
           const isDirectory = directories.has(fullPath)
 
@@ -115,10 +127,11 @@ export class FastGlobTemplateFileMatcher implements TemplateFileMatcher {
 
   private createStats(
     entryPath: string,
+    root: string,
     directories: Map<string, Set<string>>,
     filePaths: Set<string>
   ): Stats {
-    const normalizedPath = normalizeSlashes(entryPath)
+    const normalizedPath = this.resolveAdapterPath(entryPath, root)
     const isDirectory = directories.has(normalizedPath)
     const isFile = filePaths.has(normalizedPath)
 
@@ -149,5 +162,30 @@ export class FastGlobTemplateFileMatcher implements TemplateFileMatcher {
       size: 0,
       uid: 0,
     }
+  }
+
+  private resolveAdapterPath(entryPath: string, root: string): string {
+    if (entryPath === '.' || entryPath === '') {
+      return root
+    }
+
+    const normalizedPath = path.isAbsolute(entryPath)
+      ? normalizeSystemPath(path.resolve(entryPath))
+      : normalizeSystemPath(
+          path.posix.join(root, normalizeRelativePath(entryPath))
+        )
+
+    if (
+      normalizedPath === root ||
+      normalizedPath.startsWith(`${root}/`)
+    ) {
+      return normalizedPath
+    }
+
+    return normalizeSystemPath(path.posix.join(root, normalizedPath))
+  }
+
+  private normalizeRootPath(root: string): string {
+    return normalizeSystemPath(path.resolve(root))
   }
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { TemplateFile } from '@core/template/template-file'
+import { FakeFileSystem } from '@test/adapters/fs/fake-file-system'
 import { FastGlobTemplateFileMatcher } from './fast-glob-template-file-matcher'
 
 describe('FastGlobTemplateFileMatcher', () => {
@@ -149,6 +150,25 @@ describe('FastGlobTemplateFileMatcher', () => {
     ).toEqual(new Set(['src/index.ts']))
   })
 
+  it('matches files when absolute and relative template paths use windows separators', () => {
+    expect(
+      matcher.match({
+        files: [
+          {
+            absolutePath: 'C:\\templates\\base\\src\\main.ts',
+            relativePath: 'src\\main.ts',
+          },
+          {
+            absolutePath: 'C:\\templates\\base\\src\\main.test.ts',
+            relativePath: 'src\\main.test.ts',
+          },
+        ],
+        include: ['src/**/*.ts'],
+        exclude: ['src/**/*.test.ts'],
+      })
+    ).toEqual(new Set(['src/main.ts']))
+  })
+
   it('exposes file-system stats and dirent helpers for fast-glob', () => {
     const typedMatcher = matcher as unknown as {
       createFileSystemAdapter: (
@@ -254,5 +274,17 @@ describe('FastGlobTemplateFileMatcher', () => {
     expect(adapter.readdirSync('/templates/base')).toEqual([])
 
     split.mockRestore()
+  })
+
+  it('normalizes windows paths when fake file system lists files from a windows root', async () => {
+    const fileSystem = new FakeFileSystem()
+
+    fileSystem.addFile('C:\\project\\src\\main.ts', 'export const main = true')
+    fileSystem.addFile('C:\\project\\nested\\feature.ts', 'export const feature = true')
+
+    await expect(fileSystem.listFiles('C:\\project')).resolves.toEqual([
+      'src/main.ts',
+      'nested/feature.ts',
+    ])
   })
 })
