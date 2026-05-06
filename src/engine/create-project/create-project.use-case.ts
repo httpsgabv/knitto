@@ -15,6 +15,7 @@ import type { TemplateComposer } from '../compose/template-composer'
 import type { ManifestLoader } from '../manifest/manifest-loader'
 import type { PackageManagerResolver } from '@adapters/package-manager/package-manager-resolver'
 import type { GitClient } from '@adapters/git/git-client'
+import { normalizeSystemPath } from '@shared/paths'
 
 export class CreateProjectUseCase {
   constructor(
@@ -33,7 +34,9 @@ export class CreateProjectUseCase {
 
   async execute(input: CreateProjectInput): Promise<CreateProjectOutput> {
     const data = this.inputValidator.validate(input)
-    const targetDir = path.resolve(data.targetDir ?? data.projectName)
+    const targetDir = normalizeSystemPath(
+      path.resolve(data.targetDir ?? data.projectName)
+    )
 
     if (await this.fileSystem.pathExists(targetDir)) {
       throw new KnittoError(

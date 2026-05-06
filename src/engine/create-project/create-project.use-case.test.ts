@@ -7,6 +7,7 @@ import { Errors } from '@core/errors/errors'
 import type { FeatureManifest, KitManifest } from '@core/manifest/manifest'
 import type { GenerationPlan } from '@core/generation/generation-plan'
 import type { Template } from '@core/template/template'
+import { normalizeSystemPath } from '@shared/paths'
 import { FakePackageManager } from '@test/adapters/package-manager/fake-package-manager'
 import { CreateProjectUseCase } from './create-project.use-case'
 
@@ -202,7 +203,7 @@ describe('CreateProjectUseCase', () => {
 
     expect(result).toEqual({
       projectName: 'demo-app',
-      targetDir: '/projects/demo-app',
+      targetDir: normalizeSystemPath(path.resolve('/projects/demo-app')),
       plan: planFixture,
       executed: false,
     })
@@ -221,7 +222,7 @@ describe('CreateProjectUseCase', () => {
 
     expect(result).toEqual({
       projectName: 'demo-app',
-      targetDir: '/projects/demo-app',
+      targetDir: normalizeSystemPath(path.resolve('/projects/demo-app')),
       plan: planFixture,
       executed: true,
     })
@@ -241,13 +242,17 @@ describe('CreateProjectUseCase', () => {
     })
 
     expect(packageManagerResolver.resolve).toHaveBeenCalledWith('pnpm')
-    expect(packageManager.getInstallCalls()).toEqual([{ cwd: '/projects/demo-app' }])
-    expect(gitClient.init).toHaveBeenCalledWith('/projects/demo-app')
+    expect(packageManager.getInstallCalls()).toEqual([
+      { cwd: normalizeSystemPath(path.resolve('/projects/demo-app')) },
+    ])
+    expect(gitClient.init).toHaveBeenCalledWith(
+      normalizeSystemPath(path.resolve('/projects/demo-app'))
+    )
   })
 
   it('defaults the target directory to the project name when one is not provided', async () => {
     const { useCase, generationPlanner, templateComposer } = makeSut()
-    const expectedTargetDir = path.resolve('demo-app')
+    const expectedTargetDir = normalizeSystemPath(path.resolve('demo-app'))
 
     const result = await useCase.execute({
       ...createInput(),
@@ -271,10 +276,14 @@ describe('CreateProjectUseCase', () => {
       },
     })
 
+    await expect(useCase.execute(createInput())).rejects.toThrow(
+      `Target directory already exists: ${normalizeSystemPath(
+        path.resolve('/projects/demo-app')
+      )}`
+    )
     await expect(useCase.execute(createInput())).rejects.toMatchObject({
       name: 'KnittoError',
       code: Errors.TARGET_DIR_EXISTS,
-      message: 'Target directory already exists: /projects/demo-app',
     })
     expect(catalog.getKit).not.toHaveBeenCalled()
   })
