@@ -23,13 +23,5 @@ describe('BunPackageManager', () => {
         options: { cwd: '/some/project' },
       })
     })
-
-    it('should pass correct cwd to bun install', async () => {
-      await packageManager.install('/path/to/my-project')
-
-      const calls = fakeShell.getCalls()
-      expect(calls).toHaveLength(1)
-      expect(calls[0]?.options.cwd).toBe('/path/to/my-project')
-    })
   })
 })

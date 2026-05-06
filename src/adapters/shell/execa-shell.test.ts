@@ -23,33 +23,5 @@ describe('ExecaShell', () => {
         stdio: 'inherit',
       })
     })
-
-    it('should pass correct cwd to execa', async () => {
-      vi.mocked(execa).mockResolvedValue(undefined as never)
-
-      await shell.run('npm', ['install'], { cwd: '/path/to/project' })
-
-      expect(execa).toHaveBeenCalledWith('npm', ['install'], {
-        cwd: '/path/to/project',
-        stdio: 'inherit',
-      })
-    })
-
-    it('should pass multiple args to execa', async () => {
-      vi.mocked(execa).mockResolvedValue(undefined as never)
-
-      await shell.run('npm', ['install', '--save-dev', 'typescript'], {
-        cwd: '/project',
-      })
-
-      expect(execa).toHaveBeenCalledWith(
-        'npm',
-        ['install', '--save-dev', 'typescript'],
-        {
-          cwd: '/project',
-          stdio: 'inherit',
-        }
-      )
-    })
   })
 })

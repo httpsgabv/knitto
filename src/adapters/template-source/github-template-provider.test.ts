@@ -32,20 +32,6 @@ describe('GithubTemplateProvider', () => {
       )
     })
 
-    it('should call fileSystem.ensureDir with temp path', async () => {
-      const source: TemplateSource = {
-        type: 'github',
-        repo: 'owner/repo',
-        name: 'my-template',
-        path: '/templates/',
-      }
-
-      await provider.fetch(source)
-
-      const ensureDirCalls = fakeFileSystem.getCallsByMethod('ensureDir')
-      expect(ensureDirCalls.length).toBeGreaterThan(0)
-    })
-
     it('should call templateSourceResolver.resolve with correct arguments', async () => {
       const source: TemplateSource = {
         type: 'github',

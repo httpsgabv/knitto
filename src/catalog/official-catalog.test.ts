@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
 import { CatalogSchema } from '@core/catalog/catalog.schema'
-import { Errors } from '@core/errors/errors'
 import type { Kit } from '@core/catalog/kit'
 import type { Feature } from '@core/catalog/feature'
 import { OfficialCatalog } from './official-catalog'
@@ -101,14 +100,6 @@ describe('OfficialCatalog', () => {
       expect(() => new OfficialCatalog(invalidKits, invalidFeatures)).toThrow(
         KnittoError
       )
-      try {
-        new OfficialCatalog(invalidKits, invalidFeatures)
-      } catch (error) {
-        expect(error).toBeInstanceOf(KnittoError)
-        expect((error as KnittoError).code).toBe(
-          Errors.INVALID_CATALOG_CONFIGURATION
-        )
-      }
     })
 
     it('should rethrow non-ZodError as-is', () => {

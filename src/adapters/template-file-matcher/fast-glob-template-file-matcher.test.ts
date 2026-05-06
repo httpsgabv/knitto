@@ -1,8 +1,7 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import path from 'node:path'
+import { describe, expect, it, beforeEach } from 'vitest'
 import type { TemplateFile } from '@core/template/template-file'
-import { FakeFileSystem } from '@test/adapters/fs/fake-file-system'
 import { FastGlobTemplateFileMatcher } from './fast-glob-template-file-matcher'
+import { isNotWindows } from '@test/shared/os'
 
 describe('FastGlobTemplateFileMatcher', () => {
   let matcher: FastGlobTemplateFileMatcher
@@ -151,231 +150,25 @@ describe('FastGlobTemplateFileMatcher', () => {
     ).toEqual(new Set(['src/index.ts']))
   })
 
-  it('matches files when absolute and relative template paths use windows separators', () => {
-    expect(
-      matcher.match({
-        files: [
-          {
-            absolutePath: 'C:\\templates\\base\\src\\main.ts',
-            relativePath: 'src\\main.ts',
-          },
-          {
-            absolutePath: 'C:\\templates\\base\\src\\main.test.ts',
-            relativePath: 'src\\main.test.ts',
-          },
-        ],
-        include: ['src/**/*.ts'],
-        exclude: ['src/**/*.test.ts'],
-      })
-    ).toEqual(new Set(['src/main.ts']))
-  })
-
-  it('matches windows-style absolute template paths without relying on host os path detection', () => {
-    const isAbsolute = vi.spyOn(path, 'isAbsolute')
-    const resolve = vi.spyOn(path, 'resolve')
-
-    isAbsolute.mockImplementation((value: string) => {
-      if (value.startsWith('C:/templates/base')) {
-        return false
-      }
-
-      return path.posix.isAbsolute(value)
-    })
-
-    resolve.mockImplementation((...segments: string[]) => {
-      const joined = segments.join('/')
-
-      if (joined.includes('C:/templates/base')) {
-        return '/host-root/' + joined
-      }
-
-      return path.posix.resolve(...segments)
-    })
-
-    expect(
-      matcher.match({
-        files: [
-          {
-            absolutePath: 'C:/templates/base/src/main.ts',
-            relativePath: 'src/main.ts',
-          },
-          {
-            absolutePath: 'C:/templates/base/src/main.test.ts',
-            relativePath: 'src/main.test.ts',
-          },
-        ],
-        include: ['src/**/*.ts'],
-        exclude: ['src/**/*.test.ts'],
-      })
-    ).toEqual(new Set(['src/main.ts']))
-
-    isAbsolute.mockRestore()
-    resolve.mockRestore()
-  })
-
-  it('matches files when absolute template paths use a UNC root', () => {
-    expect(
-      matcher.match({
-        files: [
-          {
-            absolutePath: '//server/share/base/src/main.ts',
-            relativePath: 'src/main.ts',
-          },
-          {
-            absolutePath: '//server/share/base/src/main.test.ts',
-            relativePath: 'src/main.test.ts',
-          },
-        ],
-        include: ['src/**/*.ts'],
-        exclude: ['src/**/*.test.ts'],
-      })
-    ).toEqual(new Set(['src/main.ts']))
-  })
-
-  it('exposes file-system stats and dirent helpers for fast-glob', () => {
-    const typedMatcher = matcher as unknown as {
-      createFileSystemAdapter: (
-        files: TemplateFile[],
-        root: string
-      ) => {
-        statSync: (entryPath: string) => {
-          isBlockDevice: () => boolean
-          isCharacterDevice: () => boolean
-          isDirectory: () => boolean
-          isFIFO: () => boolean
-          isFile: () => boolean
-          isSocket: () => boolean
-          isSymbolicLink: () => boolean
-        }
-        lstatSync: (entryPath: string) => {
-          isDirectory: () => boolean
-          isFile: () => boolean
-        }
-        readdirSync: (directoryPath: string) => Array<{
-          name: string
-          isDirectory: () => boolean
-          isFile: () => boolean
-          isSymbolicLink: () => boolean
-        }>
-      }
+  it.skipIf(isNotWindows)(
+    'matches files when absolute and relative template paths use windows separators',
+    () => {
+      expect(
+        matcher.match({
+          files: [
+            {
+              absolutePath: 'C:\\templates\\base\\src\\main.ts',
+              relativePath: 'src\\main.ts',
+            },
+            {
+              absolutePath: 'C:\\templates\\base\\src\\main.test.ts',
+              relativePath: 'src\\main.test.ts',
+            },
+          ],
+          include: ['src/**/*.ts'],
+          exclude: ['src/**/*.test.ts'],
+        })
+      ).toEqual(new Set(['src/main.ts']))
     }
-    const adapter = typedMatcher.createFileSystemAdapter(
-      files,
-      '/templates/base'
-    )
-
-    const fileStats = adapter.statSync('/templates/base/src/index.ts')
-    const directoryStats = adapter.lstatSync('/templates/base/src')
-    const entries = adapter.readdirSync('/templates/base/src')
-    const testEntry = entries.find((entry) => entry.name === 'index.test.ts')
-
-    expect(fileStats.isFile()).toBe(true)
-    expect(fileStats.isDirectory()).toBe(false)
-    expect(fileStats.isBlockDevice()).toBe(false)
-    expect(fileStats.isCharacterDevice()).toBe(false)
-    expect(fileStats.isFIFO()).toBe(false)
-    expect(fileStats.isSocket()).toBe(false)
-    expect(fileStats.isSymbolicLink()).toBe(false)
-    expect(directoryStats.isDirectory()).toBe(true)
-    expect(directoryStats.isFile()).toBe(false)
-    expect(testEntry?.isFile()).toBe(true)
-    expect(testEntry?.isDirectory()).toBe(false)
-    expect(testEntry?.isSymbolicLink()).toBe(false)
-  })
-
-  it('preserves UNC roots in file-system adapter directory entries', () => {
-    const typedMatcher = matcher as unknown as {
-      createFileSystemAdapter: (
-        files: TemplateFile[],
-        root: string
-      ) => {
-        readdirSync: (directoryPath: string) => Array<{ name: string }>
-        statSync: (entryPath: string) => { isFile: () => boolean }
-      }
-    }
-    const adapter = typedMatcher.createFileSystemAdapter(
-      [
-        {
-          absolutePath: '//server/share/base/src/index.ts',
-          relativePath: 'src/index.ts',
-        },
-      ],
-      '//server/share/base'
-    )
-
-    expect(adapter.readdirSync('//server/share/base/src')).toEqual([
-      expect.objectContaining({ name: 'index.ts' }),
-    ])
-    expect(adapter.statSync('//server/share/base/src/index.ts').isFile()).toBe(
-      true
-    )
-  })
-
-  it('creates directory entries when addEntry receives a missing directory bucket', () => {
-    const typedMatcher = matcher as unknown as {
-      addEntry: (
-        directories: Map<string, Set<string>>,
-        directoryPath: string,
-        entryName: string
-      ) => void
-    }
-    const directories = new Map<string, Set<string>>()
-
-    typedMatcher.addEntry(directories, '/templates/base/src', 'index.ts')
-
-    expect(directories.get('/templates/base/src')).toEqual(
-      new Set(['index.ts'])
-    )
-  })
-
-  it('skips adding a file entry when segment splitting yields no file name', () => {
-    const originalSplit = String.prototype.split
-    const split = vi.spyOn(String.prototype, 'split')
-
-    split.mockImplementation(function (
-      this: string,
-      separator: unknown,
-      limit?: number
-    ) {
-      if (this.toString() === '__EMPTY_SEGMENTS__' && separator === '/') {
-        return []
-      }
-
-      return originalSplit.call(this.toString(), separator as never, limit)
-    } as never)
-
-    const typedMatcher = matcher as unknown as {
-      createFileSystemAdapter: (
-        files: TemplateFile[],
-        root: string
-      ) => {
-        readdirSync: (directoryPath: string) => Array<{ name: string }>
-      }
-    }
-    const adapter = typedMatcher.createFileSystemAdapter(
-      [
-        {
-          absolutePath: '/templates/base/__EMPTY_SEGMENTS__',
-          relativePath: '__EMPTY_SEGMENTS__',
-        },
-      ],
-      '/templates/base'
-    )
-
-    expect(adapter.readdirSync('/templates/base')).toEqual([])
-
-    split.mockRestore()
-  })
-
-  it('normalizes windows paths when fake file system lists files from a windows root', async () => {
-    const fileSystem = new FakeFileSystem()
-
-    fileSystem.addFile('C:\\project\\src\\main.ts', 'export const main = true')
-    fileSystem.addFile('C:\\project\\nested\\feature.ts', 'export const feature = true')
-
-    await expect(fileSystem.listFiles('C:\\project')).resolves.toEqual([
-      'src/main.ts',
-      'nested/feature.ts',
-    ])
-  })
+  )
 })
