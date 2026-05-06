@@ -165,27 +165,43 @@ export class FastGlobTemplateFileMatcher implements TemplateFileMatcher {
   }
 
   private resolveAdapterPath(entryPath: string, root: string): string {
-    if (entryPath === '.' || entryPath === '') {
+    const normalizedEntryPath = normalizeSystemPath(entryPath)
+
+    if (normalizedEntryPath === '.' || normalizedEntryPath === '') {
       return root
     }
 
-    const normalizedPath = path.isAbsolute(entryPath)
-      ? normalizeSystemPath(path.resolve(entryPath))
-      : normalizeSystemPath(
-          path.posix.join(root, normalizeRelativePath(entryPath))
-        )
-
-    if (
-      normalizedPath === root ||
-      normalizedPath.startsWith(`${root}/`)
-    ) {
-      return normalizedPath
+    if (this.isVirtualAbsolutePath(normalizedEntryPath)) {
+      return this.rebaseToVirtualRoot(normalizedEntryPath, root)
     }
 
-    return normalizeSystemPath(path.posix.join(root, normalizedPath))
+    return normalizeSystemPath(
+      path.posix.join(root, normalizeRelativePath(normalizedEntryPath))
+    )
   }
 
   private normalizeRootPath(root: string): string {
-    return normalizeSystemPath(path.resolve(root))
+    return normalizeSystemPath(root)
+  }
+
+  private isVirtualAbsolutePath(pathValue: string): boolean {
+    return /^[A-Za-z]:\//.test(pathValue) || pathValue.startsWith('/')
+  }
+
+  private rebaseToVirtualRoot(pathValue: string, root: string): string {
+    if (pathValue === root || pathValue.startsWith(`${root}/`)) {
+      return pathValue
+    }
+
+    if (pathValue.endsWith(root)) {
+      return root
+    }
+
+    const rootedIndex = pathValue.indexOf(`${root}/`)
+    if (rootedIndex >= 0) {
+      return pathValue.slice(rootedIndex)
+    }
+
+    return pathValue
   }
 }

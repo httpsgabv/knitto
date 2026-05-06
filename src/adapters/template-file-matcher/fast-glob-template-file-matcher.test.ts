@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import path from 'node:path'
 import type { TemplateFile } from '@core/template/template-file'
 import { FakeFileSystem } from '@test/adapters/fs/fake-file-system'
 import { FastGlobTemplateFileMatcher } from './fast-glob-template-file-matcher'
@@ -167,6 +168,49 @@ describe('FastGlobTemplateFileMatcher', () => {
         exclude: ['src/**/*.test.ts'],
       })
     ).toEqual(new Set(['src/main.ts']))
+  })
+
+  it('matches windows-style absolute template paths without relying on host os path detection', () => {
+    const isAbsolute = vi.spyOn(path, 'isAbsolute')
+    const resolve = vi.spyOn(path, 'resolve')
+
+    isAbsolute.mockImplementation((value: string) => {
+      if (value.startsWith('C:/templates/base')) {
+        return false
+      }
+
+      return path.posix.isAbsolute(value)
+    })
+
+    resolve.mockImplementation((...segments: string[]) => {
+      const joined = segments.join('/')
+
+      if (joined.includes('C:/templates/base')) {
+        return '/host-root/' + joined
+      }
+
+      return path.posix.resolve(...segments)
+    })
+
+    expect(
+      matcher.match({
+        files: [
+          {
+            absolutePath: 'C:/templates/base/src/main.ts',
+            relativePath: 'src/main.ts',
+          },
+          {
+            absolutePath: 'C:/templates/base/src/main.test.ts',
+            relativePath: 'src/main.test.ts',
+          },
+        ],
+        include: ['src/**/*.ts'],
+        exclude: ['src/**/*.test.ts'],
+      })
+    ).toEqual(new Set(['src/main.ts']))
+
+    isAbsolute.mockRestore()
+    resolve.mockRestore()
   })
 
   it('exposes file-system stats and dirent helpers for fast-glob', () => {
