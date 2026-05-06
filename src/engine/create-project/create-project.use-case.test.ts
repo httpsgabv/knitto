@@ -287,6 +287,22 @@ describe('CreateProjectUseCase', () => {
     )
   })
 
+  it('preserves windows drive roots for explicit target directories', async () => {
+    const { useCase, generationPlanner } = makeSut()
+
+    const result = await useCase.execute({
+      ...createInput(),
+      targetDir: 'C:\\projects\\demo-app',
+    })
+
+    expect(result.targetDir).toBe('C:/projects/demo-app')
+    expect(generationPlanner.plan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetDir: 'C:/projects/demo-app',
+      })
+    )
+  })
+
   it('throws when the target directory already exists', async () => {
     const { useCase, catalog } = makeSut({
       fileSystem: {

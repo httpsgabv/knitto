@@ -25,6 +25,15 @@ describe('ManifestOperationPathResolver', () => {
     ).toBe('C:/projects/demo-app/src/auth.ts')
   })
 
+  it('normalizes UNC source and target paths', () => {
+    expect(
+      resolver.resolveSource('\\\\server\\share\\auth', 'src\\auth.ts')
+    ).toBe('//server/share/auth/src/auth.ts')
+    expect(
+      resolver.resolveTarget('\\\\server\\share\\demo-app', 'src\\auth.ts')
+    ).toBe('//server/share/demo-app/src/auth.ts')
+  })
+
   it('rejects source paths that escape the template root', () => {
     expect(() =>
       resolver.resolveSource('/templates/auth', '../secrets.env')

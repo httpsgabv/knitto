@@ -1,8 +1,7 @@
 import { Errors } from '@core/errors/errors'
 import { KnittoError } from '@core/errors/knitto-error'
 import type { FeatureManifest, KitManifest } from '@core/manifest/manifest'
-import { normalizeSystemPath } from '@shared/paths'
-import path from 'node:path'
+import { joinSystemPath } from '@shared/paths'
 import type { PlanInput } from './plan-input'
 
 export class ManifestPlanningInputValidator {
@@ -79,9 +78,7 @@ export class ManifestPlanningInputValidator {
     slug: string,
     templateRoot: string
   ): KnittoError {
-    const manifestPath = normalizeSystemPath(
-      path.join(templateRoot, 'knitto.json')
-    )
+    const manifestPath = joinSystemPath(templateRoot, 'knitto.json')
 
     return new KnittoError(
       `Template manifest missing for ${type} "${slug}": ${manifestPath}`,

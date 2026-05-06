@@ -2,7 +2,6 @@ import type { CreateProjectInput } from './create-project.input'
 import type { CreateProjectInputValidator } from './create-project-input.validator'
 import type { CreateProjectOutput } from './create-project.output'
 import type { FeatureManifest, KitManifest } from '@core/manifest/manifest'
-import path from 'node:path'
 import type { FileSystem } from '@adapters/fs/file-system'
 import { KnittoError } from '@core/errors/knitto-error'
 import { Errors } from '@core/errors/errors'
@@ -15,7 +14,7 @@ import type { TemplateComposer } from '../compose/template-composer'
 import type { ManifestLoader } from '../manifest/manifest-loader'
 import type { PackageManagerResolver } from '@adapters/package-manager/package-manager-resolver'
 import type { GitClient } from '@adapters/git/git-client'
-import { normalizeSystemPath } from '@shared/paths'
+import { resolveSystemPath } from '@shared/paths'
 
 export class CreateProjectUseCase {
   constructor(
@@ -34,9 +33,7 @@ export class CreateProjectUseCase {
 
   async execute(input: CreateProjectInput): Promise<CreateProjectOutput> {
     const data = this.inputValidator.validate(input)
-    const targetDir = normalizeSystemPath(
-      path.resolve(data.targetDir ?? data.projectName)
-    )
+    const targetDir = resolveSystemPath(data.targetDir ?? data.projectName)
 
     if (await this.fileSystem.pathExists(targetDir)) {
       throw new KnittoError(

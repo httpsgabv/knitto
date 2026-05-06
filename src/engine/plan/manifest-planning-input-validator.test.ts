@@ -119,6 +119,24 @@ describe('ManifestPlanningInputValidator', () => {
     )
   })
 
+  it('preserves UNC manifest roots', () => {
+    expect(() =>
+      validator.validate(
+        createInput({
+          kitTemplate: { rootPath: '\\\\server\\share\\base-kit' },
+          kitManifest: null,
+        })
+      )
+    ).toThrowError(
+      expect.objectContaining({
+        name: 'KnittoError',
+        code: Errors.MISSING_TEMPLATE_MANIFEST,
+        message:
+          'Template manifest missing for kit "base-kit": //server/share/base-kit/knitto.json',
+      })
+    )
+  })
+
   it('fails when feature manifest order does not match selected features', () => {
     expect(() =>
       validator.validate(

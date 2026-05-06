@@ -1,8 +1,7 @@
-import path from 'node:path'
 import type { FileSystem } from '@adapters/fs/file-system'
 import type { Template } from '@core/template/template'
 import type { TemplateFile } from '@core/template/template-file'
-import { normalizeSystemPath } from '@shared/paths'
+import { joinSystemPath, normalizeSystemPath } from '@shared/paths'
 
 export class TemplateScanner {
   constructor(private readonly fileSystem: FileSystem) {}
@@ -12,7 +11,7 @@ export class TemplateScanner {
     const files = await this.fileSystem.listFiles(templateDir)
 
     return files.map((relativePath) => ({
-      absolutePath: normalizeSystemPath(path.join(template.rootPath, relativePath)),
+      absolutePath: joinSystemPath(template.rootPath, relativePath),
       relativePath,
     }))
   }

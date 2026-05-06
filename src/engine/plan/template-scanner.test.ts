@@ -31,4 +31,20 @@ describe('TemplateScanner', () => {
       },
     ])
   })
+
+  it('preserves UNC roots for absolute template paths', async () => {
+    const fileSystem = new FakeFileSystem()
+    const template: Template = { rootPath: '\\\\server\\share\\auth' }
+
+    fileSystem.addFile('//server/share/auth/src/auth.ts', 'export const auth = true')
+
+    const scanner = new TemplateScanner(fileSystem)
+
+    await expect(scanner.scan(template)).resolves.toEqual([
+      {
+        absolutePath: '//server/share/auth/src/auth.ts',
+        relativePath: 'src/auth.ts',
+      },
+    ])
+  })
 })

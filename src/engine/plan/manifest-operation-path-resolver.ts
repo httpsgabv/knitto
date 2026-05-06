@@ -1,7 +1,12 @@
-import path from 'node:path'
 import { Errors } from '@core/errors/errors'
 import { KnittoError } from '@core/errors/knitto-error'
-import { normalizeRelativePath, normalizeSystemPath } from '@shared/paths'
+import {
+  isSystemAbsolutePath,
+  normalizeRelativePath,
+  normalizeSystemPath,
+  relativeSystemPath,
+  resolveSystemPath,
+} from '@shared/paths'
 
 export class ManifestOperationPathResolver {
   resolveSource(rootDir: string, manifestPath: string): string {
@@ -19,16 +24,17 @@ export class ManifestOperationPathResolver {
   ): string {
     const normalizedRootDir = normalizeSystemPath(rootDir)
     const normalizedManifestPath = normalizeRelativePath(manifestPath)
-    const resolvedPath = normalizeSystemPath(
-      path.resolve(normalizedRootDir, normalizedManifestPath)
+    const resolvedPath = resolveSystemPath(
+      normalizedRootDir,
+      normalizedManifestPath
     )
     const relativePath = normalizeRelativePath(
-      path.relative(normalizedRootDir, resolvedPath)
+      relativeSystemPath(normalizedRootDir, resolvedPath)
     )
 
     if (
       relativePath === '' ||
-      (!relativePath.startsWith('..') && !path.isAbsolute(relativePath))
+      (!relativePath.startsWith('..') && !isSystemAbsolutePath(relativePath))
     ) {
       return resolvedPath
     }

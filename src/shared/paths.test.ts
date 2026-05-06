@@ -1,7 +1,11 @@
+import path from 'node:path'
 import { describe, it, expect } from 'vitest'
 import {
+  joinSystemPath,
   normalizeRelativePath,
   normalizeSlashes,
+  relativeSystemPath,
+  resolveSystemPath,
   normalizeSystemPath,
 } from './paths'
 
@@ -82,6 +86,52 @@ describe('normalizeSystemPath', () => {
     expect(normalizeSystemPath('\\\\server\\share\\demo-app\\src\\main.ts')).toBe(
       '//server/share/demo-app/src/main.ts'
     )
+  })
+})
+
+describe('resolveSystemPath', () => {
+  it('preserves Windows drive roots across hosts', () => {
+    expect(
+      normalizeSystemPath(path.posix.resolve('C:/projects/demo-app', 'src/auth.ts'))
+    ).not.toBe('C:/projects/demo-app/src/auth.ts')
+    expect(resolveSystemPath('C:/projects/demo-app', 'src/auth.ts')).toBe(
+      'C:/projects/demo-app/src/auth.ts'
+    )
+  })
+
+  it('preserves UNC roots across hosts', () => {
+    expect(
+      normalizeSystemPath(
+        path.posix.resolve('//server/share/demo-app', 'src/auth.ts')
+      )
+    ).not.toBe('//server/share/demo-app/src/auth.ts')
+    expect(resolveSystemPath('//server/share/demo-app', 'src/auth.ts')).toBe(
+      '//server/share/demo-app/src/auth.ts'
+    )
+  })
+})
+
+describe('joinSystemPath', () => {
+  it('preserves UNC roots across hosts', () => {
+    expect(
+      normalizeSystemPath(
+        path.posix.join('//server/share/demo-app', 'src/auth.ts')
+      )
+    ).not.toBe('//server/share/demo-app/src/auth.ts')
+    expect(joinSystemPath('\\\\server\\share\\demo-app', 'src/auth.ts')).toBe(
+      '//server/share/demo-app/src/auth.ts'
+    )
+  })
+})
+
+describe('relativeSystemPath', () => {
+  it('computes Windows-style relative paths across hosts', () => {
+    expect(
+      relativeSystemPath(
+        'C:/templates/auth',
+        'C:/templates/auth/src/auth.ts'
+      )
+    ).toBe('src/auth.ts')
   })
 })
 
