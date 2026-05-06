@@ -122,6 +122,32 @@ describe('ManifestOperationBuilder', () => {
             description,
           }),
         },
+        'ast.nest.add-bootstrap-variable': {
+          type: 'ast.nest.add-bootstrap-variable',
+          build: ({ operation, description, origin, resolveTarget }) => ({
+            id: 'ast-nest-add-bootstrap-variable-1',
+            type: 'ast.nest.add-bootstrap-variable',
+            target: resolveTarget(operation.target),
+            declarationKind: operation.declarationKind,
+            name: operation.name,
+            initializer: operation.initializer,
+            origin,
+            description,
+          }),
+        },
+        'ast.nest.add-bootstrap-method-call': {
+          type: 'ast.nest.add-bootstrap-method-call',
+          build: ({ operation, description, origin, resolveTarget }) => ({
+            id: 'ast-nest-add-bootstrap-method-call-1',
+            type: 'ast.nest.add-bootstrap-method-call',
+            target: resolveTarget(operation.target),
+            receiver: operation.receiver,
+            method: operation.method,
+            arguments: operation.arguments,
+            origin,
+            description,
+          }),
+        },
       }),
       new ManifestOperationPathResolver()
     )
@@ -387,6 +413,84 @@ describe('ManifestOperationBuilder', () => {
       },
       origin,
       description: 'Apply ast.nest.add-bootstrap-call from auth',
+    })
+  })
+
+  it('builds ast.nest.add-bootstrap-variable operations', () => {
+    const operation = builder.build({
+      operation: {
+        type: 'ast.nest.add-bootstrap-variable',
+        target: 'src/main.ts',
+        declarationKind: 'const',
+        name: 'xpto',
+        initializer: {
+          kind: 'new',
+          constructor: {
+            kind: 'identifier',
+            name: 'Xpto',
+          },
+          arguments: [{ kind: 'identifier', name: 'params' }],
+        },
+      },
+      templateDir,
+      targetDir,
+      origin,
+    })
+
+    expect(operation).toEqual({
+      id: expect.stringMatching(/^ast-nest-add-bootstrap-variable-\d+$/),
+      type: 'ast.nest.add-bootstrap-variable',
+      target: '/projects/demo/src/main.ts',
+      declarationKind: 'const',
+      name: 'xpto',
+      initializer: {
+        kind: 'new',
+        constructor: {
+          kind: 'identifier',
+          name: 'Xpto',
+        },
+        arguments: [{ kind: 'identifier', name: 'params' }],
+      },
+      origin,
+      description: 'Apply ast.nest.add-bootstrap-variable from auth',
+    })
+  })
+
+  it('builds ast.nest.add-bootstrap-method-call operations', () => {
+    const operation = builder.build({
+      operation: {
+        type: 'ast.nest.add-bootstrap-method-call',
+        target: 'src/main.ts',
+        receiver: {
+          kind: 'identifier',
+          name: 'xpto',
+        },
+        method: 'configure',
+        arguments: [
+          { kind: 'string', value: 'abc' },
+          { kind: 'number', value: 42 },
+        ],
+      },
+      templateDir,
+      targetDir,
+      origin,
+    })
+
+    expect(operation).toEqual({
+      id: expect.stringMatching(/^ast-nest-add-bootstrap-method-call-\d+$/),
+      type: 'ast.nest.add-bootstrap-method-call',
+      target: '/projects/demo/src/main.ts',
+      receiver: {
+        kind: 'identifier',
+        name: 'xpto',
+      },
+      method: 'configure',
+      arguments: [
+        { kind: 'string', value: 'abc' },
+        { kind: 'number', value: 42 },
+      ],
+      origin,
+      description: 'Apply ast.nest.add-bootstrap-method-call from auth',
     })
   })
 

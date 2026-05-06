@@ -3,6 +3,8 @@ import type {
   AppendReadmeManifestOperation,
   AstAddNamedImportManifestOperation,
   AstNestAddBootstrapCallManifestOperation,
+  AstNestAddBootstrapMethodCallManifestOperation,
+  AstNestAddBootstrapVariableManifestOperation,
   AstNestAddModuleImportManifestOperation,
   CopyFileManifestOperation,
   MergePackageJsonManifestOperation,
@@ -16,6 +18,8 @@ import { AppendEnvManifestOperationHandler } from './append-env-manifest-operati
 import { AppendReadmeManifestOperationHandler } from './append-readme-manifest-operation.handler'
 import { AstAddNamedImportManifestOperationHandler } from './ast-add-named-import-manifest-operation.handler'
 import { AstNestAddBootstrapCallManifestOperationHandler } from './ast-nest-add-bootstrap-call-manifest-operation.handler'
+import { AstNestAddBootstrapMethodCallManifestOperationHandler } from './ast-nest-add-bootstrap-method-call-manifest-operation.handler'
+import { AstNestAddBootstrapVariableManifestOperationHandler } from './ast-nest-add-bootstrap-variable-manifest-operation.handler'
 import { AstNestAddModuleImportManifestOperationHandler } from './ast-nest-add-module-import-manifest-operation.handler'
 import { CopyFileManifestOperationHandler } from './copy-file-manifest-operation.handler'
 import { createManifestOperationHandlers } from './create-manifest-operation-handlers'
@@ -249,6 +253,78 @@ describe('manifest operation handlers', () => {
     })
   })
 
+  it('builds ast.nest.add-bootstrap-variable operations', () => {
+    const handler = new AstNestAddBootstrapVariableManifestOperationHandler()
+    const result = handler.build(
+      createBuildContext<AstNestAddBootstrapVariableManifestOperation>({
+        type: 'ast.nest.add-bootstrap-variable',
+        target: 'src/main.ts',
+        declarationKind: 'const',
+        name: 'xpto',
+        initializer: {
+          kind: 'new',
+          constructor: {
+            kind: 'identifier',
+            name: 'Xpto',
+          },
+          arguments: [{ kind: 'identifier', name: 'params' }],
+        },
+      })
+    )
+
+    expect(handler.type).toBe('ast.nest.add-bootstrap-variable')
+    expect(result.id).toMatch(/^ast-nest-add-bootstrap-variable-\d+$/)
+    expect(result).toMatchObject({
+      type: 'ast.nest.add-bootstrap-variable',
+      target: '/target/src/main.ts',
+      declarationKind: 'const',
+      name: 'xpto',
+      initializer: {
+        kind: 'new',
+        constructor: {
+          kind: 'identifier',
+          name: 'Xpto',
+        },
+        arguments: [{ kind: 'identifier', name: 'params' }],
+      },
+      origin: { type: 'feature', slug: 'auth' },
+      description: 'build ast.nest.add-bootstrap-variable',
+    })
+  })
+
+  it('builds ast.nest.add-bootstrap-method-call operations', () => {
+    const handler = new AstNestAddBootstrapMethodCallManifestOperationHandler()
+    const result = handler.build(
+      createBuildContext<AstNestAddBootstrapMethodCallManifestOperation>({
+        type: 'ast.nest.add-bootstrap-method-call',
+        target: 'src/main.ts',
+        receiver: {
+          kind: 'member',
+          object: 'services',
+          property: 'logger',
+        },
+        method: 'flush',
+        arguments: [{ kind: 'identifier', name: 'context' }],
+      })
+    )
+
+    expect(handler.type).toBe('ast.nest.add-bootstrap-method-call')
+    expect(result.id).toMatch(/^ast-nest-add-bootstrap-method-call-\d+$/)
+    expect(result).toMatchObject({
+      type: 'ast.nest.add-bootstrap-method-call',
+      target: '/target/src/main.ts',
+      receiver: {
+        kind: 'member',
+        object: 'services',
+        property: 'logger',
+      },
+      method: 'flush',
+      arguments: [{ kind: 'identifier', name: 'context' }],
+      origin: { type: 'feature', slug: 'auth' },
+      description: 'build ast.nest.add-bootstrap-method-call',
+    })
+  })
+
   it('registers handlers for every supported manifest operation type', () => {
     const handlers = createManifestOperationHandlers()
 
@@ -264,6 +340,12 @@ describe('manifest operation handlers', () => {
     )
     expect(handlers.get('ast.nest.add-bootstrap-call')?.type).toBe(
       'ast.nest.add-bootstrap-call'
+    )
+    expect(handlers.get('ast.nest.add-bootstrap-variable')?.type).toBe(
+      'ast.nest.add-bootstrap-variable'
+    )
+    expect(handlers.get('ast.nest.add-bootstrap-method-call')?.type).toBe(
+      'ast.nest.add-bootstrap-method-call'
     )
   })
 })

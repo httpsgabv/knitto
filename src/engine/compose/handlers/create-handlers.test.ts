@@ -17,5 +17,11 @@ describe('createHandlers', () => {
     expect(handlers.get('ast.nest.add-bootstrap-call')?.type).toBe(
       'ast.nest.add-bootstrap-call'
     )
+    expect(handlers.get('ast.nest.add-bootstrap-method-call')?.type).toBe(
+      'ast.nest.add-bootstrap-method-call'
+    )
+    expect(handlers.get('ast.nest.add-bootstrap-variable')?.type).toBe(
+      'ast.nest.add-bootstrap-variable'
+    )
   })
 })

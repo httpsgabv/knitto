@@ -1,7 +1,10 @@
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { AstNestAddBootstrapCallOperation } from '@core/generation/ast-operation'
+import type {
+  AstNestAddBootstrapCallOperation,
+  AstNestAddBootstrapMethodCallOperation,
+} from '@core/generation/ast-operation'
 import { describe, expect, it } from 'vitest'
 import { NestBootstrapEditor } from './nest-bootstrap-editor'
 import { SourceFileEditor } from './source-file-editor'
@@ -522,6 +525,546 @@ describe('NestBootstrapEditor', () => {
 
     expect(content.match(/app\.setGlobalPrefix\(-1\)/g)).toHaveLength(1)
   })
+
+  it('inserts standalone bootstrap method calls with multiple arguments and object literals after NestFactory.create by default', async () => {
+    const filePath = await writeTempSourceFile(createBootstrapSource())
+
+    await editSourceFile(filePath, (sourceFile) => {
+      new NestBootstrapEditor().ensureBootstrapMethodCall({
+        sourceFile,
+        receiver: {
+          kind: 'identifier',
+          name: 'configService',
+        },
+        method: 'set',
+        arguments: standaloneSetCall.arguments,
+      })
+    })
+
+    const content = await readFile(filePath, 'utf8')
+
+    expect(content).toMatch(
+      /const app = await NestFactory\.create\(AppModule\)\s+configService\.set\('feature', \{ enabled: true, retries: 3 \}\)\s+await app\.listen\(3000\)/
+    )
+  })
+
+  it('does not duplicate an equivalent standalone bootstrap method call', async () => {
+    const filePath = await writeTempSourceFile([
+      "import { NestFactory } from '@nestjs/core'",
+      '',
+      'async function bootstrap() {',
+      '  const app = await NestFactory.create(AppModule)',
+      "  configService.set('feature', { retries: 3, enabled: true })",
+      '  await app.listen(3000)',
+      '}',
+      '',
+      'bootstrap()',
+      '',
+    ].join('\n'))
+
+    await editSourceFile(filePath, (sourceFile) => {
+      new NestBootstrapEditor().ensureBootstrapMethodCall({
+        sourceFile,
+        receiver: {
+          kind: 'identifier',
+          name: 'configService',
+        },
+        method: 'set',
+        arguments: standaloneSetCall.arguments,
+      })
+    })
+
+    const content = await readFile(filePath, 'utf8')
+
+    expect(content.match(/configService\.set\(/g)).toHaveLength(1)
+  })
+
+  it('is idempotent when ensureBootstrapMethodCall is run twice in one edit pass', async () => {
+    const filePath = await writeTempSourceFile(createBootstrapSource())
+
+    await editSourceFile(filePath, (sourceFile) => {
+      const editor = new NestBootstrapEditor()
+
+      editor.ensureBootstrapMethodCall({
+        sourceFile,
+        receiver: standaloneSetCall.receiver,
+        method: standaloneSetCall.method,
+        arguments: standaloneSetCall.arguments,
+      })
+      editor.ensureBootstrapMethodCall({
+        sourceFile,
+        receiver: standaloneSetCall.receiver,
+        method: standaloneSetCall.method,
+        arguments: standaloneSetCall.arguments,
+      })
+    })
+
+    const content = await readFile(filePath, 'utf8')
+
+    expect(content.match(/configService\.set\(/g)).toHaveLength(1)
+  })
+
+  it('is idempotent when ensureBootstrapMethodCall is run twice for an app receiver', async () => {
+    const filePath = await writeTempSourceFile(createBootstrapSource())
+
+    await editSourceFile(filePath, (sourceFile) => {
+      const editor = new NestBootstrapEditor()
+
+      editor.ensureBootstrapMethodCall({
+        sourceFile,
+        receiver: {
+          kind: 'identifier',
+          name: 'app',
+        },
+        method: 'enableShutdownHooks',
+        arguments: [],
+      })
+      editor.ensureBootstrapMethodCall({
+        sourceFile,
+        receiver: {
+          kind: 'identifier',
+          name: 'app',
+        },
+        method: 'enableShutdownHooks',
+        arguments: [],
+      })
+    })
+
+    const content = await readFile(filePath, 'utf8')
+
+    expect(content.match(/app\.enableShutdownHooks\(\)/g)).toHaveLength(1)
+  })
+
+  it('inserts standalone bootstrap method calls after the latest required local declaration', async () => {
+    const filePath = await writeTempSourceFile([
+      "import { NestFactory } from '@nestjs/core'",
+      '',
+      'async function bootstrap() {',
+      '  const app = await NestFactory.create(AppModule)',
+      '  const config = createConfig()',
+      '  await app.listen(3000)',
+      '}',
+      '',
+      'bootstrap()',
+      '',
+    ].join('\n'))
+
+    await editSourceFile(filePath, (sourceFile) => {
+      new NestBootstrapEditor().ensureBootstrapMethodCall({
+        sourceFile,
+        receiver: {
+          kind: 'identifier',
+          name: 'configService',
+        },
+        method: 'apply',
+        arguments: [
+          {
+            kind: 'identifier',
+            name: 'config',
+          },
+        ],
+      })
+    })
+
+    const content = await readFile(filePath, 'utf8')
+
+    expect(content).toMatch(
+      /const app = await NestFactory\.create\(AppModule\)\s+const config = createConfig\(\)\s+configService\.apply\(config\)\s+await app\.listen\(3000\)/
+    )
+  })
+
+  it('throws when a standalone bootstrap method call depends on a local declaration that appears only after app.listen', async () => {
+    const filePath = await writeTempSourceFile([
+      "import { NestFactory } from '@nestjs/core'",
+      '',
+      'async function bootstrap() {',
+      '  const app = await NestFactory.create(AppModule)',
+      '  await app.listen(3000)',
+      '  const config = createConfig()',
+      '}',
+      '',
+      'bootstrap()',
+      '',
+    ].join('\n'))
+
+    await expect(
+      editSourceFile(filePath, (sourceFile) => {
+        new NestBootstrapEditor().ensureBootstrapMethodCall({
+          sourceFile,
+          receiver: {
+            kind: 'identifier',
+            name: 'configService',
+          },
+          method: 'apply',
+          arguments: [
+            {
+              kind: 'identifier',
+              name: 'config',
+            },
+          ],
+        })
+      })
+    ).rejects.toMatchObject({
+      name: 'KnittoError',
+      code: 'AST_BOOTSTRAP_DEPENDENCY_AFTER_LISTEN',
+      message:
+        'Bootstrap method call "configService.apply(...)" depends on local declarations that appear after app.listen(...) in bootstrap().',
+    })
+  })
+
+  it('renders member receivers and treats equivalent existing standalone method calls as duplicates', async () => {
+    const filePath = await writeTempSourceFile([
+      "import { NestFactory } from '@nestjs/core'",
+      '',
+      'async function bootstrap() {',
+      '  const app = await NestFactory.create(AppModule)',
+      "  services.logger.flush('boot')",
+      '  await app.listen(3000)',
+      '}',
+      '',
+      'bootstrap()',
+      '',
+    ].join('\n'))
+
+    await editSourceFile(filePath, (sourceFile) => {
+      new NestBootstrapEditor().ensureBootstrapMethodCall({
+        sourceFile,
+        receiver: memberReceiverFlushCall.receiver,
+        method: memberReceiverFlushCall.method,
+        arguments: memberReceiverFlushCall.arguments,
+      })
+    })
+
+    const content = await readFile(filePath, 'utf8')
+
+    expect(content.match(/services\.logger\.flush\('boot'\)/g)).toHaveLength(1)
+  })
+
+  it('throws when an equivalent standalone bootstrap method call already exists after app.listen', async () => {
+    const filePath = await writeTempSourceFile([
+      "import { NestFactory } from '@nestjs/core'",
+      '',
+      'async function bootstrap() {',
+      '  const app = await NestFactory.create(AppModule)',
+      '  await app.listen(3000)',
+      "  configService.set('feature', { retries: 3, enabled: true })",
+      '}',
+      '',
+      'bootstrap()',
+      '',
+    ].join('\n'))
+
+    await expect(
+      editSourceFile(filePath, (sourceFile) => {
+        new NestBootstrapEditor().ensureBootstrapMethodCall({
+          sourceFile,
+          receiver: standaloneSetCall.receiver,
+          method: standaloneSetCall.method,
+          arguments: standaloneSetCall.arguments,
+        })
+      })
+    ).rejects.toMatchObject({
+      name: 'KnittoError',
+      code: 'AST_BOOTSTRAP_DEPENDENCY_AFTER_LISTEN',
+      message:
+        'Bootstrap method call "configService.set(...)" already exists after app.listen(...) in bootstrap().',
+    })
+  })
+
+  it('throws when a standalone bootstrap method call receiver is not a legal identifier', async () => {
+    const filePath = await writeTempSourceFile(createBootstrapSource())
+
+    await expect(
+      editSourceFile(filePath, (sourceFile) => {
+        new NestBootstrapEditor().ensureBootstrapMethodCall({
+          sourceFile,
+          receiver: {
+            kind: 'identifier',
+            name: 'config-service',
+          },
+          method: 'set',
+          arguments: [],
+        })
+      })
+    ).rejects.toMatchObject({
+      name: 'KnittoError',
+      message:
+        'Expected bootstrap method call receiver identifier "config-service" to be a legal identifier.',
+    })
+  })
+
+  it('throws when a standalone bootstrap method call member receiver property is not a legal identifier', async () => {
+    const filePath = await writeTempSourceFile(createBootstrapSource())
+
+    await expect(
+      editSourceFile(filePath, (sourceFile) => {
+        new NestBootstrapEditor().ensureBootstrapMethodCall({
+          sourceFile,
+          receiver: {
+            kind: 'member',
+            object: 'services',
+            property: 'bad-property',
+          },
+          method: 'flush',
+          arguments: [],
+        })
+      })
+    ).rejects.toMatchObject({
+      name: 'KnittoError',
+      message:
+        'Expected bootstrap method call receiver property "bad-property" to be a legal identifier.',
+    })
+  })
+
+  it('throws when a standalone bootstrap method call member receiver object is not a legal identifier', async () => {
+    const filePath = await writeTempSourceFile(createBootstrapSource())
+
+    await expect(
+      editSourceFile(filePath, (sourceFile) => {
+        new NestBootstrapEditor().ensureBootstrapMethodCall({
+          sourceFile,
+          receiver: {
+            kind: 'member',
+            object: 'bad-object',
+            property: 'logger',
+          },
+          method: 'flush',
+          arguments: [],
+        })
+      })
+    ).rejects.toMatchObject({
+      name: 'KnittoError',
+      message:
+        'Expected bootstrap method call receiver object "bad-object" to be a legal identifier.',
+    })
+  })
+
+  it('inserts bootstrap variables after the latest required local declaration and before app.listen', async () => {
+    const filePath = await writeTempSourceFile([
+      "import { NestFactory } from '@nestjs/core'",
+      '',
+      'async function bootstrap() {',
+      '  const app = await NestFactory.create(AppModule)',
+      '  const config = createConfig()',
+      '  await app.listen(3000)',
+      '}',
+      '',
+      'bootstrap()',
+      '',
+    ].join('\n'))
+
+    await editSourceFile(filePath, (sourceFile) => {
+      new NestBootstrapEditor().ensureBootstrapVariable({
+        sourceFile,
+        declarationKind: 'const',
+        name: 'logger',
+        initializer: {
+          kind: 'call',
+          callee: {
+            kind: 'identifier',
+            name: 'createLogger',
+          },
+          arguments: [{ kind: 'identifier', name: 'config' }],
+        },
+      })
+    })
+
+    const content = await readFile(filePath, 'utf8')
+
+    expect(content).toMatch(
+      /const app = await NestFactory\.create\(AppModule\)\s+const config = createConfig\(\)\s+const logger = createLogger\(config\)\s+await app\.listen\(3000\)/
+    )
+  })
+
+  it('does not duplicate an equivalent bootstrap variable declaration', async () => {
+    const filePath = await writeTempSourceFile([
+      "import { NestFactory } from '@nestjs/core'",
+      '',
+      'async function bootstrap() {',
+      '  const app = await NestFactory.create(AppModule)',
+      '  const logger = createLogger({ pretty: true })',
+      '  await app.listen(3000)',
+      '}',
+      '',
+      'bootstrap()',
+      '',
+    ].join('\n'))
+
+    await editSourceFile(filePath, (sourceFile) => {
+      new NestBootstrapEditor().ensureBootstrapVariable({
+        sourceFile,
+        declarationKind: 'const',
+        name: 'logger',
+        initializer: {
+          kind: 'call',
+          callee: {
+            kind: 'identifier',
+            name: 'createLogger',
+          },
+          arguments: [
+            {
+              kind: 'object',
+              properties: [
+                {
+                  key: 'pretty',
+                  value: { kind: 'boolean', value: true },
+                },
+              ],
+            },
+          ],
+        },
+      })
+    })
+
+    const content = await readFile(filePath, 'utf8')
+
+    expect(content.match(/const logger = createLogger\(/g)).toHaveLength(1)
+  })
+
+  it('throws when the same bootstrap variable name already exists with a different initializer', async () => {
+    const filePath = await writeTempSourceFile([
+      "import { NestFactory } from '@nestjs/core'",
+      '',
+      'async function bootstrap() {',
+      '  const app = await NestFactory.create(AppModule)',
+      '  const logger = createLogger()',
+      '  await app.listen(3000)',
+      '}',
+      '',
+      'bootstrap()',
+      '',
+    ].join('\n'))
+
+    await expect(
+      editSourceFile(filePath, (sourceFile) => {
+        new NestBootstrapEditor().ensureBootstrapVariable({
+          sourceFile,
+          declarationKind: 'const',
+          name: 'logger',
+          initializer: {
+            kind: 'call',
+            callee: {
+              kind: 'identifier',
+              name: 'createLogger',
+            },
+            arguments: [{ kind: 'string', value: 'json' }],
+          },
+        })
+      })
+    ).rejects.toMatchObject({
+      name: 'KnittoError',
+      code: 'AST_BOOTSTRAP_VARIABLE_CONFLICT',
+      message:
+        'Bootstrap variable "logger" already exists in bootstrap() with a different declaration.',
+    })
+  })
+
+  it('throws when a bootstrap variable depends on a local declaration that appears only after app.listen', async () => {
+    const filePath = await writeTempSourceFile([
+      "import { NestFactory } from '@nestjs/core'",
+      '',
+      'async function bootstrap() {',
+      '  const app = await NestFactory.create(AppModule)',
+      '  await app.listen(3000)',
+      '  const config = createConfig()',
+      '}',
+      '',
+      'bootstrap()',
+      '',
+    ].join('\n'))
+
+    await expect(
+      editSourceFile(filePath, (sourceFile) => {
+        new NestBootstrapEditor().ensureBootstrapVariable({
+          sourceFile,
+          declarationKind: 'const',
+          name: 'logger',
+          initializer: {
+            kind: 'call',
+            callee: {
+              kind: 'identifier',
+              name: 'createLogger',
+            },
+            arguments: [{ kind: 'identifier', name: 'config' }],
+          },
+        })
+      })
+    ).rejects.toMatchObject({
+      name: 'KnittoError',
+      code: 'AST_BOOTSTRAP_DEPENDENCY_AFTER_LISTEN',
+      message:
+        'Bootstrap variable "logger" depends on local declarations that appear after app.listen(...) in bootstrap().',
+    })
+  })
+
+  it('throws when an equivalent bootstrap variable already exists after app.listen', async () => {
+    const filePath = await writeTempSourceFile([
+      "import { NestFactory } from '@nestjs/core'",
+      '',
+      'async function bootstrap() {',
+      '  const app = await NestFactory.create(AppModule)',
+      '  await app.listen(3000)',
+      '  const logger = createLogger({ pretty: true })',
+      '}',
+      '',
+      'bootstrap()',
+      '',
+    ].join('\n'))
+
+    await expect(
+      editSourceFile(filePath, (sourceFile) => {
+        new NestBootstrapEditor().ensureBootstrapVariable({
+          sourceFile,
+          declarationKind: 'const',
+          name: 'logger',
+          initializer: {
+            kind: 'call',
+            callee: {
+              kind: 'identifier',
+              name: 'createLogger',
+            },
+            arguments: [
+              {
+                kind: 'object',
+                properties: [
+                  {
+                    key: 'pretty',
+                    value: { kind: 'boolean', value: true },
+                  },
+                ],
+              },
+            ],
+          },
+        })
+      })
+    ).rejects.toMatchObject({
+      name: 'KnittoError',
+      code: 'AST_BOOTSTRAP_DEPENDENCY_AFTER_LISTEN',
+      message:
+        'Bootstrap variable "logger" already exists after app.listen(...) in bootstrap().',
+    })
+  })
+
+  it('throws when a bootstrap variable name is not a legal identifier', async () => {
+    const filePath = await writeTempSourceFile(createBootstrapSource())
+
+    await expect(
+      editSourceFile(filePath, (sourceFile) => {
+        new NestBootstrapEditor().ensureBootstrapVariable({
+          sourceFile,
+          declarationKind: 'const',
+          name: 'bad-name',
+          initializer: {
+            kind: 'number',
+            value: 1,
+          },
+        })
+      })
+    ).rejects.toMatchObject({
+      name: 'KnittoError',
+      message: 'Expected bootstrap variable name "bad-name" to be a legal identifier.',
+    })
+  })
 })
 
 const useLoggerCall: AstNestAddBootstrapCallOperation['call'] = {
@@ -617,6 +1160,60 @@ const setConfigCall: AstNestAddBootstrapCallOperation['call'] = {
           },
         },
       ],
+    },
+  ],
+}
+
+const standaloneSetCall: Pick<
+  AstNestAddBootstrapMethodCallOperation,
+  'receiver' | 'method' | 'arguments'
+> = {
+  receiver: {
+    kind: 'identifier',
+    name: 'configService',
+  },
+  method: 'set',
+  arguments: [
+    {
+      kind: 'string',
+      value: 'feature',
+    },
+    {
+      kind: 'object',
+      properties: [
+        {
+          key: 'enabled',
+          value: {
+            kind: 'boolean',
+            value: true,
+          },
+        },
+        {
+          key: 'retries',
+          value: {
+            kind: 'number',
+            value: 3,
+          },
+        },
+      ],
+    },
+  ],
+}
+
+const memberReceiverFlushCall: Pick<
+  AstNestAddBootstrapMethodCallOperation,
+  'receiver' | 'method' | 'arguments'
+> = {
+  receiver: {
+    kind: 'member',
+    object: 'services',
+    property: 'logger',
+  },
+  method: 'flush',
+  arguments: [
+    {
+      kind: 'string',
+      value: 'boot',
     },
   ],
 }

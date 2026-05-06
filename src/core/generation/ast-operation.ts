@@ -1,5 +1,16 @@
 import type { BaseOperation } from './file-operation'
 
+export type AstBootstrapMethodReceiver =
+  | {
+      kind: 'identifier'
+      name: string
+    }
+  | {
+      kind: 'member'
+      object: string
+      property: string
+    }
+
 export type AstBootstrapExpression =
   | {
       kind: 'identifier'
@@ -38,30 +49,12 @@ export type AstBootstrapExpression =
     }
   | {
       kind: 'call'
-      callee:
-        | {
-            kind: 'identifier'
-            name: string
-          }
-        | {
-            kind: 'member'
-            object: string
-            property: string
-          }
+      callee: AstBootstrapMethodReceiver
       arguments: AstBootstrapExpression[]
     }
   | {
       kind: 'new'
-      constructor:
-        | {
-            kind: 'identifier'
-            name: string
-          }
-        | {
-            kind: 'member'
-            object: string
-            property: string
-          }
+      constructor: AstBootstrapMethodReceiver
       arguments: AstBootstrapExpression[]
     }
 
@@ -92,7 +85,25 @@ export type AstNestAddBootstrapCallOperation = BaseOperation & {
   }
 }
 
+export type AstNestAddBootstrapVariableOperation = BaseOperation & {
+  type: 'ast.nest.add-bootstrap-variable'
+  target: string
+  declarationKind: 'const' | 'let'
+  name: string
+  initializer: AstBootstrapExpression
+}
+
+export type AstNestAddBootstrapMethodCallOperation = BaseOperation & {
+  type: 'ast.nest.add-bootstrap-method-call'
+  target: string
+  receiver: AstBootstrapMethodReceiver
+  method: string
+  arguments: AstBootstrapExpression[]
+}
+
 export type AstOperation =
   | AstAddNamedImportOperation
   | AstNestAddModuleImportOperation
   | AstNestAddBootstrapCallOperation
+  | AstNestAddBootstrapVariableOperation
+  | AstNestAddBootstrapMethodCallOperation

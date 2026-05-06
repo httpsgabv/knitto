@@ -96,6 +96,11 @@ const AstBootstrapMemberExpressionSchema = z.object({
   property: IdentifierSchema,
 })
 
+const AstBootstrapMethodReceiverSchema = z.discriminatedUnion('kind', [
+  AstBootstrapIdentifierExpressionSchema,
+  AstBootstrapMemberExpressionSchema,
+])
+
 const AstBootstrapCalleeExpressionSchema = z.discriminatedUnion('kind', [
   AstBootstrapIdentifierExpressionSchema,
   AstBootstrapMemberExpressionSchema,
@@ -196,6 +201,22 @@ export const AstNestAddBootstrapCallManifestOperationSchema = z.object({
   }),
 })
 
+export const AstNestAddBootstrapVariableManifestOperationSchema = z.object({
+  type: z.literal('ast.nest.add-bootstrap-variable'),
+  target: z.string().min(1),
+  declarationKind: z.enum(['const', 'let']),
+  name: IdentifierSchema,
+  initializer: AstBootstrapExpressionSchema,
+})
+
+export const AstNestAddBootstrapMethodCallManifestOperationSchema = z.object({
+  type: z.literal('ast.nest.add-bootstrap-method-call'),
+  target: z.string().min(1),
+  receiver: AstBootstrapMethodReceiverSchema,
+  method: IdentifierSchema,
+  arguments: z.array(AstBootstrapExpressionSchema),
+})
+
 export const ManifestOperationSchema = z.discriminatedUnion('type', [
   AddAllManifestOperationSchema,
   CopyFileManifestOperationSchema,
@@ -205,4 +226,6 @@ export const ManifestOperationSchema = z.discriminatedUnion('type', [
   AstAddNamedImportManifestOperationSchema,
   AstNestAddModuleImportManifestOperationSchema,
   AstNestAddBootstrapCallManifestOperationSchema,
+  AstNestAddBootstrapVariableManifestOperationSchema,
+  AstNestAddBootstrapMethodCallManifestOperationSchema,
 ])

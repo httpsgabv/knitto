@@ -6,6 +6,8 @@ import {
   AstAddNamedImportManifestOperationSchema,
   AstBootstrapExpressionSchema,
   AstNestAddBootstrapCallManifestOperationSchema,
+  AstNestAddBootstrapMethodCallManifestOperationSchema,
+  AstNestAddBootstrapVariableManifestOperationSchema,
   AstNestAddModuleImportManifestOperationSchema,
   CopyFileManifestOperationSchema,
   ManifestOperationSchema,
@@ -44,6 +46,14 @@ export type AstNestAddModuleImportManifestOperation = z.infer<
 
 export type AstNestAddBootstrapCallManifestOperation = z.infer<
   typeof AstNestAddBootstrapCallManifestOperationSchema
+>
+
+export type AstNestAddBootstrapVariableManifestOperation = z.infer<
+  typeof AstNestAddBootstrapVariableManifestOperationSchema
+>
+
+export type AstNestAddBootstrapMethodCallManifestOperation = z.infer<
+  typeof AstNestAddBootstrapMethodCallManifestOperationSchema
 >
 
 export type ManifestOperation = z.infer<typeof ManifestOperationSchema>

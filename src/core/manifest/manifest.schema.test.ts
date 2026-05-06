@@ -1,5 +1,13 @@
-import type { AstNestAddBootstrapCallManifestOperation } from './manifest-operation'
-import { AstNestAddBootstrapCallManifestOperationSchema } from './manifest-operation.schema'
+import type {
+  AstNestAddBootstrapCallManifestOperation,
+  AstNestAddBootstrapMethodCallManifestOperation,
+  AstNestAddBootstrapVariableManifestOperation,
+} from './manifest-operation'
+import {
+  AstNestAddBootstrapCallManifestOperationSchema,
+  AstNestAddBootstrapMethodCallManifestOperationSchema,
+  AstNestAddBootstrapVariableManifestOperationSchema,
+} from './manifest-operation.schema'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 import { FeatureManifestSchema } from './feature-manifest.schema'
 import { KitManifestSchema } from './kit-manifest.schema'
@@ -284,6 +292,96 @@ describe('ManifestSchema', () => {
     expect(result.success).toBe(false)
   })
 
+  it('parses ast.nest.add-bootstrap-variable operations with const initializers', () => {
+    const result = ManifestOperationSchema.parse({
+      type: 'ast.nest.add-bootstrap-variable',
+      target: 'src/main.ts',
+      declarationKind: 'const',
+      name: 'xpto',
+      initializer: {
+        kind: 'new',
+        constructor: { kind: 'identifier', name: 'Xpto' },
+        arguments: [{ kind: 'identifier', name: 'params' }],
+      },
+    })
+
+    expect(result).toEqual({
+      type: 'ast.nest.add-bootstrap-variable',
+      target: 'src/main.ts',
+      declarationKind: 'const',
+      name: 'xpto',
+      initializer: {
+        kind: 'new',
+        constructor: { kind: 'identifier', name: 'Xpto' },
+        arguments: [{ kind: 'identifier', name: 'params' }],
+      },
+    })
+  })
+
+  it('rejects invalid bootstrap variable identifiers', () => {
+    const result = ManifestOperationSchema.safeParse({
+      type: 'ast.nest.add-bootstrap-variable',
+      target: 'src/main.ts',
+      declarationKind: 'let',
+      name: 'bad-name',
+      initializer: { kind: 'number', value: 1 },
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('parses ast.nest.add-bootstrap-method-call operations', () => {
+    expect(
+      ManifestOperationSchema.parse({
+        type: 'ast.nest.add-bootstrap-method-call',
+        target: 'src/main.ts',
+        receiver: {
+          kind: 'identifier',
+          name: 'xpto',
+        },
+        method: 'configure',
+        arguments: [
+          { kind: 'string', value: 'abc' },
+          {
+            kind: 'object',
+            properties: [
+              { key: 'enabled', value: { kind: 'boolean', value: true } },
+            ],
+          },
+        ],
+      })
+    ).toEqual({
+      type: 'ast.nest.add-bootstrap-method-call',
+      target: 'src/main.ts',
+      receiver: {
+        kind: 'identifier',
+        name: 'xpto',
+      },
+      method: 'configure',
+      arguments: [
+        { kind: 'string', value: 'abc' },
+        {
+          kind: 'object',
+          properties: [
+            { key: 'enabled', value: { kind: 'boolean', value: true } },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('rejects invalid bootstrap method identifiers', () => {
+    const result = ManifestOperationSchema.safeParse({
+      type: 'ast.nest.add-bootstrap-method-call',
+      target: 'src/main.ts',
+      receiver: { kind: 'identifier', name: 'xpto' },
+      method: 'bad-name',
+      arguments: [],
+    })
+
+    expect(result.success).toBe(false)
+  })
+
   it('preserves concrete bootstrap expression types for parsed operations', () => {
     const result = AstNestAddBootstrapCallManifestOperationSchema.parse({
       type: 'ast.nest.add-bootstrap-call',
@@ -335,5 +433,40 @@ describe('ManifestSchema', () => {
     })
 
     expect(result.success).toBe(false)
+  })
+
+  it('preserves concrete bootstrap variable types for parsed operations', () => {
+    const result = AstNestAddBootstrapVariableManifestOperationSchema.parse({
+      type: 'ast.nest.add-bootstrap-variable',
+      target: 'src/main.ts',
+      declarationKind: 'const',
+      name: 'xpto',
+      initializer: {
+        kind: 'new',
+        constructor: {
+          kind: 'identifier',
+          name: 'Xpto',
+        },
+        arguments: [{ kind: 'identifier', name: 'params' }],
+      },
+    })
+
+    expectTypeOf(result).toEqualTypeOf<AstNestAddBootstrapVariableManifestOperation>()
+  })
+
+  it('preserves concrete bootstrap method call types for parsed operations', () => {
+    const result = AstNestAddBootstrapMethodCallManifestOperationSchema.parse({
+      type: 'ast.nest.add-bootstrap-method-call',
+      target: 'src/main.ts',
+      receiver: {
+        kind: 'member',
+        object: 'services',
+        property: 'logger',
+      },
+      method: 'flush',
+      arguments: [{ kind: 'identifier', name: 'context' }],
+    })
+
+    expectTypeOf(result).toEqualTypeOf<AstNestAddBootstrapMethodCallManifestOperation>()
   })
 })

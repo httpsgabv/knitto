@@ -1,6 +1,12 @@
 import { Errors } from '@core/errors/errors'
 import { KnittoError } from '@core/errors/knitto-error'
-import type { AstNestAddBootstrapCallOperation, AstBootstrapExpression } from '@core/generation/ast-operation'
+import type {
+  AstBootstrapMethodReceiver,
+  AstNestAddBootstrapCallOperation,
+  AstNestAddBootstrapMethodCallOperation,
+  AstNestAddBootstrapVariableOperation,
+  AstBootstrapExpression,
+} from '@core/generation/ast-operation'
 import { Node, SyntaxKind, type Block, type CallExpression, type Expression, type SourceFile } from 'ts-morph'
 
 type EnsureBootstrapCallInput = {
@@ -9,50 +15,23 @@ type EnsureBootstrapCallInput = {
   call: AstNestAddBootstrapCallOperation['call']
 }
 
+type EnsureBootstrapVariableInput = {
+  sourceFile: SourceFile
+  declarationKind: AstNestAddBootstrapVariableOperation['declarationKind']
+  name: string
+  initializer: AstNestAddBootstrapVariableOperation['initializer']
+}
+
+type EnsureBootstrapMethodCallInput = {
+  sourceFile: SourceFile
+  receiver: AstNestAddBootstrapMethodCallOperation['receiver']
+  method: string
+  arguments: AstNestAddBootstrapMethodCallOperation['arguments']
+}
+
 export class NestBootstrapEditor {
   ensureBootstrapCall({ sourceFile, appVar, call }: EnsureBootstrapCallInput): void {
-    const bootstrapFunction = sourceFile.getFunction('bootstrap')
-
-    if (!bootstrapFunction) {
-      throw new KnittoError(
-        'Could not find a bootstrap() function in the source file.',
-        Errors.AST_BOOTSTRAP_FUNCTION_NOT_FOUND
-      )
-    }
-
-    const bootstrapBody = bootstrapFunction.getBody()
-
-    if (!bootstrapBody || !Node.isBlock(bootstrapBody)) {
-      throw new KnittoError(
-        'Could not find a bootstrap() function in the source file.',
-        Errors.AST_BOOTSTRAP_FUNCTION_NOT_FOUND
-      )
-    }
-
-    const appDeclaration = bootstrapBody
-      .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
-      .find((declaration) => {
-        return (
-          declaration.getName() === appVar &&
-          declaration.getFirstAncestorByKind(SyntaxKind.Block) === bootstrapBody
-        )
-      })
-
-    if (!appDeclaration) {
-      throw new KnittoError(
-        `Could not find ${appVar} variable declaration in bootstrap() scope.`,
-        Errors.AST_BOOTSTRAP_APP_VAR_NOT_FOUND
-      )
-    }
-
-    const createCall = this.getNestFactoryCreateCall(appDeclaration.getInitializer())
-
-    if (!createCall) {
-      throw new KnittoError(
-        `Expected ${appVar} to be initialized by NestFactory.create(...) in bootstrap().`,
-        Errors.AST_BOOTSTRAP_APP_VAR_NOT_NEST_FACTORY_CREATE
-      )
-    }
+    const { bootstrapBody, appDeclaration } = this.getBootstrapAppContext(sourceFile, appVar)
 
     this.assertLegalIdentifier(appVar, `Expected app variable "${appVar}" to be a legal identifier.`)
     this.assertLegalIdentifier(
@@ -68,6 +47,118 @@ export class NestBootstrapEditor {
     const statementIndex = this.getInsertionStatementIndex(bootstrapBody, appStatement, appVar, call)
 
     bootstrapBody.insertStatements(statementIndex + 1, this.renderCallStatement(appVar, call))
+  }
+
+  ensureBootstrapVariable({
+    sourceFile,
+    declarationKind,
+    name,
+    initializer,
+  }: EnsureBootstrapVariableInput): void {
+    const { bootstrapBody, appDeclaration } = this.getBootstrapAppContext(sourceFile)
+    const appVar = appDeclaration.getName()
+
+    this.assertLegalIdentifier(
+      name,
+      `Expected bootstrap variable name "${name}" to be a legal identifier.`
+    )
+
+    const existingDeclaration = this.findBootstrapVariableDeclaration(bootstrapBody, name)
+
+    if (existingDeclaration) {
+      const existingDeclarationKind = existingDeclaration.getVariableStatementOrThrow().getDeclarationKind()
+      const existingInitializer = existingDeclaration.getInitializer()
+      const parsedInitializer = existingInitializer
+        ? this.parseExpression(existingInitializer)
+        : undefined
+
+      if (
+        existingDeclarationKind === declarationKind &&
+        parsedInitializer !== undefined &&
+        this.expressionsAreEquivalent(parsedInitializer, initializer)
+      ) {
+        this.assertStatementAppearsBeforeListen(
+          bootstrapBody,
+          appVar,
+          existingDeclaration.getVariableStatementOrThrow(),
+          `Bootstrap variable "${name}"`
+        )
+        return
+      }
+
+      throw new KnittoError(
+        `Bootstrap variable "${name}" already exists in bootstrap() with a different declaration.`,
+        Errors.AST_BOOTSTRAP_VARIABLE_CONFLICT
+      )
+    }
+
+    const appStatement = appDeclaration.getVariableStatementOrThrow()
+    const statementIndex = this.getBootstrapVariableInsertionStatementIndex(
+      bootstrapBody,
+      appStatement,
+      name,
+      initializer,
+      appVar
+    )
+
+    bootstrapBody.insertStatements(
+      statementIndex + 1,
+      this.renderVariableStatement(declarationKind, name, initializer)
+    )
+  }
+
+  ensureBootstrapMethodCall({
+    sourceFile,
+    receiver,
+    method,
+    arguments: argumentsList,
+  }: EnsureBootstrapMethodCallInput): void {
+    const { bootstrapBody, appDeclaration } = this.getBootstrapAppContext(sourceFile)
+    const appVar = appDeclaration.getName()
+
+    this.assertLegalBootstrapMethodReceiver(receiver)
+    this.assertLegalIdentifier(
+      method,
+      `Expected bootstrap method call method "${method}" to be a legal identifier.`
+    )
+
+    const expectedCall = {
+      receiver,
+      method,
+      arguments: argumentsList,
+    }
+
+    const existingEquivalentMethodCall = this.findEquivalentMethodCallStatement(
+      bootstrapBody,
+      appVar,
+      expectedCall
+    )
+
+    if (existingEquivalentMethodCall) {
+      this.assertStatementAppearsBeforeListen(
+        bootstrapBody,
+        appVar,
+        existingEquivalentMethodCall,
+        `Bootstrap method call "${this.renderMethodCallDisplay(receiver, method)}"`
+      )
+
+      return
+    }
+
+    const appStatement = appDeclaration.getVariableStatementOrThrow()
+    const statementIndex = this.getBootstrapMethodCallInsertionStatementIndex(
+      bootstrapBody,
+      appStatement,
+      appVar,
+      receiver,
+      argumentsList,
+      method
+    )
+
+    bootstrapBody.insertStatements(
+      statementIndex + 1,
+      this.renderMethodCallStatement(receiver, method, argumentsList)
+    )
   }
 
   private getInsertionStatementIndex(
@@ -104,15 +195,153 @@ export class NestBootstrapEditor {
     return insertionIndex
   }
 
+  private getBootstrapVariableInsertionStatementIndex(
+    bootstrapBody: Block,
+    appStatement: Node,
+    variableName: string,
+    initializer: AstBootstrapExpression,
+    appVar: string
+  ): number {
+    const statements = bootstrapBody.getStatements()
+    const appStatementIndex = statements.findIndex((statement) => statement === appStatement)
+    const listenStatementIndex = this.getListenStatementIndex(bootstrapBody, appVar)
+    const referencedNames = new Set(this.collectReferencedIdentifiers([initializer]))
+
+    referencedNames.delete(appVar)
+
+    if (
+      listenStatementIndex !== -1 &&
+      this.hasReferencedDeclarationAfterIndex(bootstrapBody, referencedNames, listenStatementIndex)
+    ) {
+      throw new KnittoError(
+        `Bootstrap variable "${variableName}" depends on local declarations that appear after app.listen(...) in bootstrap().`,
+        Errors.AST_BOOTSTRAP_DEPENDENCY_AFTER_LISTEN
+      )
+    }
+
+    const latestRequiredDeclarationIndex = this.getLatestRequiredDeclarationIndex(
+      bootstrapBody,
+      appStatementIndex,
+      appVar,
+      [initializer],
+      listenStatementIndex
+    )
+
+    return listenStatementIndex === -1
+      ? latestRequiredDeclarationIndex
+      : Math.min(latestRequiredDeclarationIndex, listenStatementIndex - 1)
+  }
+
+  private getBootstrapMethodCallInsertionStatementIndex(
+    bootstrapBody: Block,
+    appStatement: Node,
+    appVar: string,
+    receiver: AstBootstrapMethodReceiver,
+    argumentsList: AstBootstrapExpression[],
+    method: string
+  ): number {
+    const statements = bootstrapBody.getStatements()
+    const appStatementIndex = statements.findIndex((statement) => statement === appStatement)
+    const listenStatementIndex = this.getListenStatementIndex(bootstrapBody, appVar)
+    const referencedNames = new Set(
+      this.collectReceiverReferencedIdentifiers(receiver, argumentsList)
+    )
+
+    referencedNames.delete(appVar)
+
+    if (
+      listenStatementIndex !== -1 &&
+      this.hasReferencedDeclarationAfterIndex(bootstrapBody, referencedNames, listenStatementIndex)
+    ) {
+      throw new KnittoError(
+        `Bootstrap method call "${this.renderMethodCallDisplay(receiver, method)}" depends on local declarations that appear after app.listen(...) in bootstrap().`,
+        Errors.AST_BOOTSTRAP_DEPENDENCY_AFTER_LISTEN
+      )
+    }
+
+    const latestRequiredDeclarationIndex = this.getLatestRequiredDeclarationIndexFromNames(
+      bootstrapBody,
+      appStatementIndex,
+      referencedNames,
+      listenStatementIndex === -1 ? Number.POSITIVE_INFINITY : listenStatementIndex - 1
+    )
+
+    let insertionIndex = latestRequiredDeclarationIndex
+
+    for (let index = insertionIndex + 1; index < statements.length; index += 1) {
+      if (listenStatementIndex !== -1 && index >= listenStatementIndex) {
+        break
+      }
+
+      const statement = statements[index]
+
+      if (!statement || !Node.isExpressionStatement(statement)) {
+        break
+      }
+
+      if (!this.parseBootstrapMethodCall(statement.getExpression())) {
+        break
+      }
+
+      insertionIndex = index
+    }
+
+    return insertionIndex
+  }
+
+  private hasReferencedDeclarationAfterIndex(
+    bootstrapBody: Block,
+    referencedNames: Set<string>,
+    statementIndex: number
+  ): boolean {
+    if (referencedNames.size === 0) {
+      return false
+    }
+
+    const statements = bootstrapBody.getStatements()
+
+    for (let index = statementIndex + 1; index < statements.length; index += 1) {
+      const statement = statements[index]
+
+      if (!statement) {
+        continue
+      }
+
+      const declaredNames = this.getStatementDeclaredNames(statement)
+
+      if (declaredNames.some((name) => referencedNames.has(name))) {
+        return true
+      }
+    }
+
+    return false
+  }
+
   private getLatestRequiredDeclarationIndex(
     bootstrapBody: Block,
     appStatementIndex: number,
     appVar: string,
-    argumentsList: AstBootstrapExpression[]
+    argumentsList: AstBootstrapExpression[],
+    maxStatementIndex = Number.POSITIVE_INFINITY
   ): number {
     const referencedNames = new Set(this.collectReferencedIdentifiers(argumentsList))
 
     referencedNames.delete(appVar)
+
+    return this.getLatestRequiredDeclarationIndexFromNames(
+      bootstrapBody,
+      appStatementIndex,
+      referencedNames,
+      maxStatementIndex
+    )
+  }
+
+  private getLatestRequiredDeclarationIndexFromNames(
+    bootstrapBody: Block,
+    appStatementIndex: number,
+    referencedNames: Set<string>,
+    maxStatementIndex = Number.POSITIVE_INFINITY
+  ): number {
 
     if (referencedNames.size === 0) {
       return appStatementIndex
@@ -121,7 +350,11 @@ export class NestBootstrapEditor {
     const statements = bootstrapBody.getStatements()
     let latestIndex = appStatementIndex
 
-    for (let index = appStatementIndex + 1; index < statements.length; index += 1) {
+    for (
+      let index = appStatementIndex + 1;
+      index < statements.length && index <= maxStatementIndex;
+      index += 1
+    ) {
       const statement = statements[index]
 
       if (!statement) {
@@ -136,6 +369,105 @@ export class NestBootstrapEditor {
     }
 
     return latestIndex
+  }
+
+  private getListenStatementIndex(bootstrapBody: Block, appVar: string): number {
+    return bootstrapBody.getStatements().findIndex((statement) => {
+      if (!Node.isExpressionStatement(statement)) {
+        return false
+      }
+
+      const expression = this.unwrapExpression(statement.getExpression())
+
+      if (!expression || !Node.isCallExpression(expression)) {
+        return false
+      }
+
+      const callee = expression.getExpression()
+
+      return (
+        Node.isPropertyAccessExpression(callee) &&
+        callee.getExpression().getText() === appVar &&
+        callee.getName() === 'listen'
+      )
+    })
+  }
+
+  private getBootstrapAppContext(sourceFile: SourceFile, appVar?: string) {
+    const bootstrapFunction = sourceFile.getFunction('bootstrap')
+
+    if (!bootstrapFunction) {
+      throw new KnittoError(
+        'Could not find a bootstrap() function in the source file.',
+        Errors.AST_BOOTSTRAP_FUNCTION_NOT_FOUND
+      )
+    }
+
+    const bootstrapBody = bootstrapFunction.getBody()
+
+    if (!bootstrapBody || !Node.isBlock(bootstrapBody)) {
+      throw new KnittoError(
+        'Could not find a bootstrap() function in the source file.',
+        Errors.AST_BOOTSTRAP_FUNCTION_NOT_FOUND
+      )
+    }
+
+    const appDeclaration = appVar
+      ? this.findBootstrapAppDeclarationByName(bootstrapBody, appVar)
+      : this.findBootstrapAppDeclaration(bootstrapBody)
+
+    if (!appDeclaration) {
+      throw new KnittoError(
+        appVar
+          ? `Could not find ${appVar} variable declaration in bootstrap() scope.`
+          : 'Could not find a NestFactory.create(...) application variable declaration in bootstrap().',
+        Errors.AST_BOOTSTRAP_APP_VAR_NOT_FOUND
+      )
+    }
+
+    const createCall = this.getNestFactoryCreateCall(appDeclaration.getInitializer())
+
+    if (!createCall) {
+      throw new KnittoError(
+        `Expected ${appDeclaration.getName()} to be initialized by NestFactory.create(...) in bootstrap().`,
+        Errors.AST_BOOTSTRAP_APP_VAR_NOT_NEST_FACTORY_CREATE
+      )
+    }
+
+    return { bootstrapBody, appDeclaration }
+  }
+
+  private findBootstrapAppDeclarationByName(bootstrapBody: Block, appVar: string) {
+    return bootstrapBody
+      .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
+      .find((declaration) => {
+        return (
+          declaration.getName() === appVar &&
+          declaration.getFirstAncestorByKind(SyntaxKind.Block) === bootstrapBody
+        )
+      })
+  }
+
+  private findBootstrapAppDeclaration(bootstrapBody: Block) {
+    return bootstrapBody
+      .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
+      .find((declaration) => {
+        return (
+          declaration.getFirstAncestorByKind(SyntaxKind.Block) === bootstrapBody &&
+          this.getNestFactoryCreateCall(declaration.getInitializer()) !== undefined
+        )
+      })
+  }
+
+  private findBootstrapVariableDeclaration(bootstrapBody: Block, name: string) {
+    return bootstrapBody
+      .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
+      .find((declaration) => {
+        return (
+          declaration.getName() === name &&
+          declaration.getFirstAncestorByKind(SyntaxKind.Block) === bootstrapBody
+        )
+      })
   }
 
   private getNestFactoryCreateCall(initializer: Node | undefined): CallExpression | undefined {
@@ -206,6 +538,46 @@ export class NestBootstrapEditor {
     })
   }
 
+  private findEquivalentMethodCallStatement(
+    bootstrapBody: Block,
+    appVar: string,
+    expectedCall: Pick<AstNestAddBootstrapMethodCallOperation, 'receiver' | 'method' | 'arguments'>
+  ): Node | undefined {
+    return bootstrapBody.getStatements().find((statement) => {
+      if (!Node.isExpressionStatement(statement)) {
+        return false
+      }
+
+      const existingCall = this.parseBootstrapMethodCall(statement.getExpression())
+
+      return existingCall !== undefined && this.methodCallsAreEquivalent(existingCall, expectedCall)
+    })
+  }
+
+  private assertStatementAppearsBeforeListen(
+    bootstrapBody: Block,
+    appVar: string,
+    statement: Node,
+    label: string
+  ): void {
+    const listenStatementIndex = this.getListenStatementIndex(bootstrapBody, appVar)
+
+    if (listenStatementIndex === -1) {
+      return
+    }
+
+    const statementIndex = bootstrapBody
+      .getStatements()
+      .findIndex((existingStatement) => existingStatement === statement)
+
+    if (statementIndex > listenStatementIndex) {
+      throw new KnittoError(
+        `${label} already exists after app.listen(...) in bootstrap().`,
+        Errors.AST_BOOTSTRAP_DEPENDENCY_AFTER_LISTEN
+      )
+    }
+  }
+
   private parseBootstrapCall(
     expression: Expression,
     appVar: string
@@ -229,6 +601,40 @@ export class NestBootstrapEditor {
     const parsedArguments = argumentsList.filter((argument) => this.isDefined(argument))
 
     return {
+      method: callee.getName(),
+      arguments: parsedArguments,
+    }
+  }
+
+  private parseBootstrapMethodCall(
+    expression: Expression
+  ): Pick<AstNestAddBootstrapMethodCallOperation, 'receiver' | 'method' | 'arguments'> | undefined {
+    if (!Node.isCallExpression(expression)) {
+      return undefined
+    }
+
+    const callee = expression.getExpression()
+
+    if (!Node.isPropertyAccessExpression(callee)) {
+      return undefined
+    }
+
+    const receiver = this.parseCallCallee(callee.getExpression())
+
+    if (!receiver) {
+      return undefined
+    }
+
+    const argumentsList = expression.getArguments().map((argument) => this.parseExpression(argument))
+
+    if (argumentsList.some((argument) => argument === undefined)) {
+      return undefined
+    }
+
+    const parsedArguments = argumentsList.filter((argument) => this.isDefined(argument))
+
+    return {
+      receiver,
       method: callee.getName(),
       arguments: parsedArguments,
     }
@@ -432,6 +838,17 @@ export class NestBootstrapEditor {
     return left.method === right.method && this.expressionsAreEquivalent(left.arguments, right.arguments)
   }
 
+  private methodCallsAreEquivalent(
+    left: Pick<AstNestAddBootstrapMethodCallOperation, 'receiver' | 'method' | 'arguments'>,
+    right: Pick<AstNestAddBootstrapMethodCallOperation, 'receiver' | 'method' | 'arguments'>
+  ): boolean {
+    return (
+      left.method === right.method &&
+      this.expressionsAreEquivalent(left.receiver, right.receiver) &&
+      this.expressionsAreEquivalent(left.arguments, right.arguments)
+    )
+  }
+
   private expressionsAreEquivalent(left: AstBootstrapExpression[], right: AstBootstrapExpression[]): boolean
   private expressionsAreEquivalent(left: AstBootstrapExpression, right: AstBootstrapExpression): boolean
   private expressionsAreEquivalent(
@@ -514,6 +931,28 @@ export class NestBootstrapEditor {
     return `${appVar}.${call.method}(${call.arguments.map((argument) => this.renderExpression(argument)).join(', ')})`
   }
 
+  private renderVariableStatement(
+    declarationKind: AstNestAddBootstrapVariableOperation['declarationKind'],
+    name: string,
+    initializer: AstBootstrapExpression
+  ): string {
+    return `${declarationKind} ${name} = ${this.renderExpression(initializer)}`
+  }
+
+  private renderMethodCallStatement(
+    receiver: AstBootstrapMethodReceiver,
+    method: string,
+    argumentsList: AstBootstrapExpression[]
+  ): string {
+    return `${this.renderExpression(receiver)}.${method}(${argumentsList
+      .map((argument) => this.renderExpression(argument))
+      .join(', ')})`
+  }
+
+  private renderMethodCallDisplay(receiver: AstBootstrapMethodReceiver, method: string): string {
+    return `${this.renderExpression(receiver)}.${method}(...)`
+  }
+
   private renderExpression(expression: AstBootstrapExpression): string {
     switch (expression.kind) {
       case 'identifier':
@@ -559,6 +998,16 @@ export class NestBootstrapEditor {
 
   private collectReferencedIdentifiers(expressions: AstBootstrapExpression[]): string[] {
     return expressions.flatMap((expression) => this.collectReferencedIdentifiersFromExpression(expression))
+  }
+
+  private collectReceiverReferencedIdentifiers(
+    receiver: AstBootstrapMethodReceiver,
+    argumentsList: AstBootstrapExpression[]
+  ): string[] {
+    return [
+      ...this.collectReferencedIdentifiersFromExpression(receiver),
+      ...this.collectReferencedIdentifiers(argumentsList),
+    ]
   }
 
   private collectReferencedIdentifiersFromExpression(expression: AstBootstrapExpression): string[] {
@@ -667,6 +1116,25 @@ export class NestBootstrapEditor {
 
   private isLegalIdentifier(name: string): boolean {
     return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)
+  }
+
+  private assertLegalBootstrapMethodReceiver(receiver: AstBootstrapMethodReceiver): void {
+    if (receiver.kind === 'identifier') {
+      this.assertLegalIdentifier(
+        receiver.name,
+        `Expected bootstrap method call receiver identifier "${receiver.name}" to be a legal identifier.`
+      )
+      return
+    }
+
+    this.assertLegalIdentifier(
+      receiver.object,
+      `Expected bootstrap method call receiver object "${receiver.object}" to be a legal identifier.`
+    )
+    this.assertLegalIdentifier(
+      receiver.property,
+      `Expected bootstrap method call receiver property "${receiver.property}" to be a legal identifier.`
+    )
   }
 
   private isDefined<T>(value: T | undefined): value is T {
