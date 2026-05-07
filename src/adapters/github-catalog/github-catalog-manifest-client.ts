@@ -1,5 +1,4 @@
-import type { CatalogData } from '@catalog/catalog-data'
-import { CatalogSchema } from '@core/catalog/catalog.schema'
+import { CatalogSchema, type CatalogData } from '@core/catalog/catalog.schema'
 import type { RemoteCatalogClient } from './remote-catalog-client'
 
 export class GithubCatalogManifestClient implements RemoteCatalogClient {

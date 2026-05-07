@@ -1,5 +1,5 @@
 import z from 'zod'
-import { TemplateSourceSchema, type TemplateSource } from './template-source'
+import { TemplateSourceSchema } from './template-source'
 
 export const FeatureSchema = z.object({
   slug: z.string().min(1),
@@ -11,12 +11,4 @@ export const FeatureSchema = z.object({
   conflictsWith: z.array(z.string()).default([]),
 })
 
-export type Feature = {
-  slug: string
-  name: string
-  description: string
-  source: TemplateSource
-  supports: string[]
-  requires: string[]
-  conflictsWith: string[]
-}
+export type Feature = z.infer<typeof FeatureSchema>

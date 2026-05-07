@@ -6,3 +6,5 @@ export const CatalogSchema = z.object({
   kits: z.array(KitSchema),
   features: z.array(FeatureSchema),
 })
+
+export type CatalogData = z.infer<typeof CatalogSchema>

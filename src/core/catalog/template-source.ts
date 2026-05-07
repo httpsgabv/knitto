@@ -9,9 +9,4 @@ export const TemplateSourceSchema = z.discriminatedUnion('type', [
   }),
 ])
 
-export type TemplateSource = {
-  type: 'github'
-  repo: string
-  name: string
-  path: string
-}
+export type TemplateSource = z.infer<typeof TemplateSourceSchema>

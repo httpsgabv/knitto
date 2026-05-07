@@ -1,5 +1,5 @@
 import z from 'zod'
-import { TemplateSourceSchema, type TemplateSource } from './template-source'
+import { TemplateSourceSchema } from './template-source'
 
 export const KitSchema = z.object({
   name: z.string().min(1),
@@ -9,10 +9,4 @@ export const KitSchema = z.object({
   compatibleFeatures: z.array(z.string()).default([]),
 })
 
-export type Kit = {
-  name: string
-  slug: string
-  source: TemplateSource
-  description: string
-  compatibleFeatures: string[]
-}
+export type Kit = z.infer<typeof KitSchema>
