@@ -65,6 +65,13 @@ export type AstAddNamedImportOperation = BaseOperation & {
   from: string
 }
 
+export type AstAddSideEffectImportOperation = BaseOperation & {
+  type: 'ast.add-side-effect-import'
+  target: string
+  from: string
+  position: 'top' | 'bottom'
+}
+
 export type AstNestAddModuleImportOperation = BaseOperation & {
   type: 'ast.nest.add-module-import'
   target: string
@@ -103,6 +110,7 @@ export type AstNestAddBootstrapMethodCallOperation = BaseOperation & {
 
 export type AstOperation =
   | AstAddNamedImportOperation
+  | AstAddSideEffectImportOperation
   | AstNestAddModuleImportOperation
   | AstNestAddBootstrapCallOperation
   | AstNestAddBootstrapVariableOperation

@@ -3,6 +3,7 @@ import { ManifestOperationHandlerRegistry } from '../manifest-operation-handler-
 import { AppendEnvManifestOperationHandler } from './append-env-manifest-operation.handler'
 import { AppendReadmeManifestOperationHandler } from './append-readme-manifest-operation.handler'
 import { AstAddNamedImportManifestOperationHandler } from './ast-add-named-import-manifest-operation.handler'
+import { AstAddSideEffectImportManifestOperationHandler } from './ast-add-side-effect-import-manifest-operation.handler'
 import { AstNestAddBootstrapCallManifestOperationHandler } from './ast-nest-add-bootstrap-call-manifest-operation.handler'
 import { AstNestAddBootstrapMethodCallManifestOperationHandler } from './ast-nest-add-bootstrap-method-call-manifest-operation.handler'
 import { AstNestAddBootstrapVariableManifestOperationHandler } from './ast-nest-add-bootstrap-variable-manifest-operation.handler'
@@ -17,6 +18,8 @@ export function createManifestOperationHandlers(): ManifestOperationHandlerRegis
     'append-env': new AppendEnvManifestOperationHandler(),
     'append-readme': new AppendReadmeManifestOperationHandler(),
     'ast.add-named-import': new AstAddNamedImportManifestOperationHandler(),
+    'ast.add-side-effect-import':
+      new AstAddSideEffectImportManifestOperationHandler(),
     'ast.nest.add-module-import':
       new AstNestAddModuleImportManifestOperationHandler(),
     'ast.nest.add-bootstrap-call':

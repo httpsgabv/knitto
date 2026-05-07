@@ -12,9 +12,12 @@ import {
   CopyFileManifestOperationSchema,
   ManifestOperationSchema,
   MergePackageJsonManifestOperationSchema,
+  AstAddSideEffectImportManifestOperationSchema,
 } from './manifest-operation.schema'
 
-export type AddAllManifestOperation = z.infer<typeof AddAllManifestOperationSchema>
+export type AddAllManifestOperation = z.infer<
+  typeof AddAllManifestOperationSchema
+>
 
 export type CopyFileManifestOperation = z.infer<
   typeof CopyFileManifestOperationSchema
@@ -34,6 +37,10 @@ export type AppendReadmeManifestOperation = z.infer<
 
 export type AstAddNamedImportManifestOperation = z.infer<
   typeof AstAddNamedImportManifestOperationSchema
+>
+
+export type AstAddSideEffectImportManifestOperation = z.infer<
+  typeof AstAddSideEffectImportManifestOperationSchema
 >
 
 export type AstBootstrapExpression = z.infer<

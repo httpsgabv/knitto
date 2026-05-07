@@ -181,6 +181,13 @@ export const AstAddNamedImportManifestOperationSchema = z.object({
   from: z.string().min(1),
 })
 
+export const AstAddSideEffectImportManifestOperationSchema = z.object({
+  type: z.literal('ast.add-side-effect-import'),
+  target: z.string().min(1),
+  from: z.string().min(1),
+  position: z.enum(['top', 'bottom']).default('top'),
+})
+
 export const AstNestAddModuleImportManifestOperationSchema = z.object({
   type: z.literal('ast.nest.add-module-import'),
   target: z.string().min(1),
@@ -197,7 +204,7 @@ export const AstNestAddBootstrapCallManifestOperationSchema = z.object({
   appVar: IdentifierSchema,
   call: z.object({
     method: IdentifierSchema,
-    arguments: z.array(AstBootstrapExpressionSchema),
+    arguments: z.array(AstBootstrapExpressionSchema).optional(),
   }),
 })
 
@@ -224,6 +231,7 @@ export const ManifestOperationSchema = z.discriminatedUnion('type', [
   AppendEnvManifestOperationSchema,
   AppendReadmeManifestOperationSchema,
   AstAddNamedImportManifestOperationSchema,
+  AstAddSideEffectImportManifestOperationSchema,
   AstNestAddModuleImportManifestOperationSchema,
   AstNestAddBootstrapCallManifestOperationSchema,
   AstNestAddBootstrapVariableManifestOperationSchema,

@@ -7,7 +7,6 @@ import { ManifestSchema } from '@core/manifest/manifest.schema'
 export class ManifestValidator {
   validate(input: unknown): Manifest {
     try {
-      console.log(input)
       return ManifestSchema.parse(input)
     } catch (error) {
       if (error instanceof ZodError) {

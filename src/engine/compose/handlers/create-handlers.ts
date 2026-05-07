@@ -3,6 +3,7 @@ import { OperationHandlerRegistry } from '../operation-handler-registry'
 import { AppendEnvHandler } from './append-env.handler'
 import { AppendReadmeHandler } from './append-readme.handler'
 import { AstAddNamedImportHandler } from './ast-add-named-import.handler'
+import { AstAddSideEffectImportHandler } from './ast-add-side-effect-import.handler'
 import { AstNestAddBootstrapCallHandler } from './ast-nest-add-bootstrap-call.handler'
 import { AstNestAddBootstrapMethodCallHandler } from './ast-nest-add-bootstrap-method-call.handler'
 import { AstNestAddBootstrapVariableHandler } from './ast-nest-add-bootstrap-variable.handler'
@@ -19,9 +20,11 @@ export function createHandlers(): OperationHandlerRegistry {
     'append-readme': new AppendReadmeHandler(),
     'skip-file': new SkipFileHandler(),
     'ast.add-named-import': new AstAddNamedImportHandler(),
+    'ast.add-side-effect-import': new AstAddSideEffectImportHandler(),
     'ast.nest.add-module-import': new AstNestAddModuleImportHandler(),
     'ast.nest.add-bootstrap-call': new AstNestAddBootstrapCallHandler(),
-    'ast.nest.add-bootstrap-method-call': new AstNestAddBootstrapMethodCallHandler(),
+    'ast.nest.add-bootstrap-method-call':
+      new AstNestAddBootstrapMethodCallHandler(),
     'ast.nest.add-bootstrap-variable': new AstNestAddBootstrapVariableHandler(),
   }
 

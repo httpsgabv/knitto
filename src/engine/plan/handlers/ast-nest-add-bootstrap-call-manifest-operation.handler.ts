@@ -12,7 +12,6 @@ export class AstNestAddBootstrapCallManifestOperationHandler implements Manifest
     origin,
     resolveTarget,
   }: ManifestOperationBuildContext<AstNestAddBootstrapCallManifestOperation>) {
-    console.log(this.type)
     return {
       id: createId('ast-nest-add-bootstrap-call'),
       type: 'ast.nest.add-bootstrap-call' as const,
