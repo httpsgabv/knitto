@@ -125,7 +125,10 @@ describe('cli/main', () => {
     )
     expect(rootCommand.version).toHaveBeenCalledWith('0.1.0')
     expect(rootCommand.parseAsync).toHaveBeenCalledWith(process.argv)
-    expect(registerCreateCommand).toHaveBeenCalledWith(rootCommand, runCreateFlow)
+    expect(registerCreateCommand).toHaveBeenCalledWith(
+      rootCommand,
+      runCreateFlow
+    )
     expect(registerListKitsCommand).toHaveBeenCalledWith(
       rootCommand.listCommand,
       app.catalog

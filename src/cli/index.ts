@@ -10,7 +10,7 @@ import { KnittoError } from '../core/errors/knitto-error'
 import { makeCreateFlow } from './create-flow'
 
 export async function main(): Promise<void> {
-  const app = createApp()
+  const app = await createApp()
 
   const runCreateFlow = makeCreateFlow({
     catalog: app.catalog,

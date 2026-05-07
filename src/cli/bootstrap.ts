@@ -1,3 +1,4 @@
+import { GithubCatalogManifestClient } from '@adapters/github-catalog/github-catalog-manifest-client'
 import { NodeFileSystem } from '../adapters/fs/node-file-system'
 import { NodeGitClient } from '../adapters/git/node-git-client'
 import { PackageManagerResolver } from '../adapters/package-manager/package-manager-resolver'
@@ -5,7 +6,7 @@ import { ExecaShell } from '../adapters/shell/execa-shell'
 import { FastGlobTemplateFileMatcher } from '@adapters/template-file-matcher/fast-glob-template-file-matcher'
 import { GithubTemplateProvider } from '@adapters/template-source/github-template-provider'
 import { TigedTemplateSourceResolver } from '@adapters/template-source/tiged-template-source-resolver'
-import { OfficialCatalog } from '@catalog/official-catalog'
+import { loadCatalog } from '@catalog/load-catalog/load-catalog'
 import type { Catalog } from '@core/catalog/catalog'
 import { ImportEditor } from '@engine/ast/import-editor'
 import { NestBootstrapEditor } from '@engine/ast/nest-bootstrap-editor'
@@ -39,14 +40,28 @@ import { ManifestOperationsExpander } from '@engine/plan/manifest-operations-exp
 import { ManifestPlanningInputValidator } from '@engine/plan/manifest-planning-input-validator'
 import { OperationSorter } from '@engine/plan/operation-sorter'
 import { TemplateScanner } from '@engine/plan/template-scanner'
+import { printer } from './output/printer'
 
 export type App = {
   catalog: Catalog
   createProjectUseCase: CreateProjectUseCase
 }
 
-export function createApp(): App {
-  const catalog = new OfficialCatalog()
+export async function createApp(
+  options: {
+    loadCatalog?: () => Promise<Catalog>
+  } = {}
+): Promise<App> {
+  const catalog =
+    (await options.loadCatalog?.()) ??
+    (await loadCatalog({
+      remoteCatalogClient: new GithubCatalogManifestClient(fetch),
+      onFallback: () => {
+        printer.info(
+          'Using bundled catalog snapshot because remote catalog could not be loaded.'
+        )
+      },
+    }))
 
   const fileSystem = new NodeFileSystem()
   const templateSourceResolver = new TigedTemplateSourceResolver()
