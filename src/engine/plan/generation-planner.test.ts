@@ -877,6 +877,47 @@ describe('OperationSorter', () => {
       'copy-file',
     ])
   })
+
+  it('sorts append-lines after upsert-env and before feature copy-file', () => {
+    const sorter = new OperationSorter()
+
+    const operations = sorter.sort([
+      {
+        id: 'copy-1',
+        type: 'copy-file',
+        source: '/templates/prisma/.gitignore',
+        target: '/projects/demo-app/.gitignore',
+        renderVariables: true,
+        overwrite: true,
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Copy ignore file from prisma',
+      },
+      {
+        id: 'append-lines-1',
+        type: 'append-lines',
+        target: '/projects/demo-app/.gitignore',
+        lines: ['/src/generated/prisma', '.env'],
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Append ignore lines from prisma',
+      },
+      {
+        id: 'upsert-env-1',
+        type: 'upsert-env',
+        target: '/projects/demo-app/.env',
+        values: {
+          DATABASE_URL: 'postgresql://localhost:5432/app',
+        },
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Upsert env values from prisma',
+      },
+    ])
+
+    expect(operations.map((operation) => operation.type)).toEqual([
+      'upsert-env',
+      'append-lines',
+      'copy-file',
+    ])
+  })
 })
 
 describe('ConflictDetector', () => {
@@ -1067,6 +1108,38 @@ describe('ConflictDetector', () => {
         code: 'DUPLICATE_UNSAFE_WRITE',
         target: '/projects/demo-app/.env',
         operationIds: ['upsert-env-1', 'copy-1'],
+      }),
+    ])
+  })
+
+  it('treats append-lines as generated content for later copy-file conflicts', () => {
+    const detector = new ConflictDetector()
+    const conflicts = detector.detect([
+      {
+        id: 'append-lines-1',
+        type: 'append-lines',
+        target: '/projects/demo-app/.gitignore',
+        lines: ['/src/generated/prisma', '.env'],
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Append ignore lines from prisma',
+      },
+      {
+        id: 'copy-1',
+        type: 'copy-file',
+        source: '/templates/prisma/.gitignore',
+        target: '/projects/demo-app/.gitignore',
+        overwrite: true,
+        renderVariables: true,
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Copy ignore file from prisma',
+      },
+    ])
+
+    expect(conflicts).toEqual([
+      expect.objectContaining({
+        code: 'DUPLICATE_UNSAFE_WRITE',
+        target: '/projects/demo-app/.gitignore',
+        operationIds: ['append-lines-1', 'copy-1'],
       }),
     ])
   })

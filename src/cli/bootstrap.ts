@@ -24,6 +24,7 @@ import { ManifestLoader } from '@engine/manifest/manifest-loader'
 import { ManifestReader } from '@engine/manifest/manifest-reader'
 import { ManifestValidator } from '@engine/manifest/manifest-validator'
 import { EnvMerger } from '@engine/merge/env-merger'
+import { LineAppender } from '@engine/merge/line-appender'
 import { PackageJsonMerger } from '@engine/merge/package-json-merger'
 import { ReadmeMerger } from '@engine/merge/readme-merger'
 import { CompatibilityChecker } from '@engine/plan/compatibility-checker'
@@ -57,6 +58,7 @@ export function createApp(): App {
   const variableRenderer = new VariableRenderer()
   const packageJsonMerger = new PackageJsonMerger(fileSystem)
   const envMerger = new EnvMerger(fileSystem)
+  const lineAppender = new LineAppender(fileSystem)
   const readmeMerger = new ReadmeMerger(fileSystem)
   const manifestReader = new ManifestReader(fileSystem)
   const manifestValidator = new ManifestValidator()
@@ -72,6 +74,7 @@ export function createApp(): App {
     variableRenderer,
     packageJsonMerger,
     envMerger,
+    lineAppender,
     readmeMerger,
     sourceFileEditor,
     importEditor,

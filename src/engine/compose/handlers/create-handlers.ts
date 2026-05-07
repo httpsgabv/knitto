@@ -1,6 +1,7 @@
 import type { OperationHandlerRecord } from '../operation-handler-registry'
 import { OperationHandlerRegistry } from '../operation-handler-registry'
 import { AppendEnvHandler } from './append-env.handler'
+import { AppendLinesHandler } from './append-lines.handler'
 import { AppendReadmeHandler } from './append-readme.handler'
 import { AstAddNamedImportHandler } from './ast-add-named-import.handler'
 import { AstAddSideEffectImportHandler } from './ast-add-side-effect-import.handler'
@@ -19,6 +20,7 @@ export function createHandlers(): OperationHandlerRegistry {
     'merge-package-json': new MergePackageJsonHandler(),
     'append-env': new AppendEnvHandler(),
     'upsert-env': new UpsertEnvHandler(),
+    'append-lines': new AppendLinesHandler(),
     'append-readme': new AppendReadmeHandler(),
     'skip-file': new SkipFileHandler(),
     'ast.add-named-import': new AstAddNamedImportHandler(),

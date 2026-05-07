@@ -37,6 +37,12 @@ export type UpsertEnvOperation = BaseOperation & {
   values: Record<string, string>
 }
 
+export type AppendLinesOperation = BaseOperation & {
+  type: 'append-lines'
+  target: string
+  lines: string[]
+}
+
 export type AppendReadmeOperation = BaseOperation & {
   type: 'append-readme'
   source: string
@@ -55,5 +61,6 @@ export type FileOperation =
   | MergePackageJsonOperation
   | AppendEnvOperation
   | UpsertEnvOperation
+  | AppendLinesOperation
   | AppendReadmeOperation
   | SkipFileOperation

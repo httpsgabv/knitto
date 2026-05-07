@@ -20,16 +20,19 @@ export class OperationSorter {
     if (operation.type === 'upsert-env') {
       return 4
     }
-    if (operation.type === 'append-readme') {
+    if (operation.type === 'append-lines') {
       return 5
     }
-    if (operation.type === 'copy-file') {
+    if (operation.type === 'append-readme') {
       return 6
     }
-    if (operation.type.startsWith('ast.')) {
+    if (operation.type === 'copy-file') {
       return 7
     }
+    if (operation.type.startsWith('ast.')) {
+      return 8
+    }
 
-    return 8
+    return 9
   }
 }

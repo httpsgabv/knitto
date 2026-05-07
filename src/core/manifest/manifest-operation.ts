@@ -2,6 +2,7 @@ import type z from 'zod'
 import {
   AddAllManifestOperationSchema,
   AppendEnvManifestOperationSchema,
+  AppendLinesManifestOperationSchema,
   AppendReadmeManifestOperationSchema,
   AstAddNamedImportManifestOperationSchema,
   AstBootstrapExpressionSchema,
@@ -34,6 +35,10 @@ export type AppendEnvManifestOperation = z.infer<
 
 export type UpsertEnvManifestOperation = z.infer<
   typeof UpsertEnvManifestOperationSchema
+>
+
+export type AppendLinesManifestOperation = z.infer<
+  typeof AppendLinesManifestOperationSchema
 >
 
 export type AppendReadmeManifestOperation = z.infer<

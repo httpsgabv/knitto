@@ -9,6 +9,7 @@ describe('manifest operation handlers', () => {
     expect(handlers.get('merge-package-json')?.type).toBe('merge-package-json')
     expect(handlers.get('append-env')?.type).toBe('append-env')
     expect(handlers.get('upsert-env')?.type).toBe('upsert-env')
+    expect(handlers.get('append-lines')?.type).toBe('append-lines')
     expect(handlers.get('append-readme')?.type).toBe('append-readme')
     expect(handlers.get('ast.add-named-import')?.type).toBe(
       'ast.add-named-import'

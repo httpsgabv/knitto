@@ -173,6 +173,12 @@ export const UpsertEnvManifestOperationSchema = z.object({
   values: z.record(z.string(), z.string()),
 })
 
+export const AppendLinesManifestOperationSchema = z.object({
+  type: z.literal('append-lines'),
+  target: z.string().min(1),
+  lines: z.array(z.string()),
+})
+
 export const AppendReadmeManifestOperationSchema = z.object({
   type: z.literal('append-readme'),
   source: z.string().min(1),
@@ -236,6 +242,7 @@ export const ManifestOperationSchema = z.discriminatedUnion('type', [
   MergePackageJsonManifestOperationSchema,
   AppendEnvManifestOperationSchema,
   UpsertEnvManifestOperationSchema,
+  AppendLinesManifestOperationSchema,
   AppendReadmeManifestOperationSchema,
   AstAddNamedImportManifestOperationSchema,
   AstAddSideEffectImportManifestOperationSchema,

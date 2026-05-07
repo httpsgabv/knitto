@@ -1,6 +1,7 @@
 import type { ManifestOperationHandlerRecord } from '../manifest-operation-handler-registry'
 import { ManifestOperationHandlerRegistry } from '../manifest-operation-handler-registry'
 import { AppendEnvManifestOperationHandler } from './append-env-manifest-operation.handler'
+import { AppendLinesManifestOperationHandler } from './append-lines-manifest-operation.handler'
 import { AppendReadmeManifestOperationHandler } from './append-readme-manifest-operation.handler'
 import { AstAddNamedImportManifestOperationHandler } from './ast-add-named-import-manifest-operation.handler'
 import { AstAddSideEffectImportManifestOperationHandler } from './ast-add-side-effect-import-manifest-operation.handler'
@@ -18,6 +19,7 @@ export function createManifestOperationHandlers(): ManifestOperationHandlerRegis
     'merge-package-json': new MergePackageJsonManifestOperationHandler(),
     'append-env': new AppendEnvManifestOperationHandler(),
     'upsert-env': new UpsertEnvManifestOperationHandler(),
+    'append-lines': new AppendLinesManifestOperationHandler(),
     'append-readme': new AppendReadmeManifestOperationHandler(),
     'ast.add-named-import': new AstAddNamedImportManifestOperationHandler(),
     'ast.add-side-effect-import':
