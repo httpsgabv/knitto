@@ -167,6 +167,12 @@ export const AppendEnvManifestOperationSchema = z.object({
   strategy: z.literal('append-missing').default('append-missing'),
 })
 
+export const UpsertEnvManifestOperationSchema = z.object({
+  type: z.literal('upsert-env'),
+  target: z.string().min(1).default('.env'),
+  values: z.record(z.string(), z.string()),
+})
+
 export const AppendReadmeManifestOperationSchema = z.object({
   type: z.literal('append-readme'),
   source: z.string().min(1),
@@ -229,6 +235,7 @@ export const ManifestOperationSchema = z.discriminatedUnion('type', [
   CopyFileManifestOperationSchema,
   MergePackageJsonManifestOperationSchema,
   AppendEnvManifestOperationSchema,
+  UpsertEnvManifestOperationSchema,
   AppendReadmeManifestOperationSchema,
   AstAddNamedImportManifestOperationSchema,
   AstAddSideEffectImportManifestOperationSchema,

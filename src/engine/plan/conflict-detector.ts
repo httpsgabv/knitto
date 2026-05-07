@@ -53,6 +53,7 @@ export class ConflictDetector {
     return (
       operation.type === 'merge-package-json' ||
       operation.type === 'append-env' ||
+      operation.type === 'upsert-env' ||
       operation.type === 'append-readme'
     )
   }

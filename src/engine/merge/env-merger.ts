@@ -33,6 +33,35 @@ export class EnvMerger {
     await this.fileSystem.writeFile(target, `${chunks.join('\n\n')}\n`)
   }
 
+  async upsert(target: string, values: Record<string, string>) {
+    const targetContent = (await this.fileSystem.pathExists(target))
+      ? await this.fileSystem.readFile(target, 'utf8')
+      : ''
+
+    const lines = targetContent.split(/\r?\n/)
+    const seenKeys = new Set<string>()
+    const nextLines = lines.map((line) => {
+      const key = this.extractKey(line)
+
+      if (!key || !(key in values) || seenKeys.has(key)) {
+        return line
+      }
+
+      seenKeys.add(key)
+
+      return `${key}=${values[key]}`
+    })
+
+    const appendedLines = Object.entries(values)
+      .filter(([key]) => !seenKeys.has(key))
+      .map(([key, value]) => `${key}=${value}`)
+
+    const trimmedTarget = nextLines.join('\n').trimEnd()
+    const chunks = [trimmedTarget, appendedLines.join('\n')].filter(Boolean)
+
+    await this.fileSystem.writeFile(target, `${chunks.join('\n\n')}\n`)
+  }
+
   private extractKeys(content: string) {
     return content
       .split(/\r?\n/)

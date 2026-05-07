@@ -21,7 +21,9 @@ import { ManifestPlanningInputValidator } from './manifest-planning-input-valida
 import { OperationSorter } from './operation-sorter'
 
 class InMemoryTemplateScanner {
-  constructor(private readonly filesByTemplateRoot: Record<string, TemplateFile[]>) {}
+  constructor(
+    private readonly filesByTemplateRoot: Record<string, TemplateFile[]>
+  ) {}
 
   async scan(template: Template): Promise<TemplateFile[]> {
     return this.filesByTemplateRoot[template.rootPath] ?? []
@@ -105,12 +107,12 @@ describe('GenerationPlanner', () => {
         featureManifests: [],
       } as never)
     ).rejects.toThrowError(
-        expect.objectContaining({
-          name: 'KnittoError',
-          code: Errors.MISSING_TEMPLATE_MANIFEST,
-          message: `Template manifest missing for kit "base-kit": ${manifestPathFor('/templates/base-kit')}`,
-        })
-      )
+      expect.objectContaining({
+        name: 'KnittoError',
+        code: Errors.MISSING_TEMPLATE_MANIFEST,
+        message: `Template manifest missing for kit "base-kit": ${manifestPathFor('/templates/base-kit')}`,
+      })
+    )
   })
 
   it('normalizes windows kit missing-manifest paths end-to-end', async () => {
@@ -183,12 +185,12 @@ describe('GenerationPlanner', () => {
         featureManifests: [null],
       } as never)
     ).rejects.toThrowError(
-        expect.objectContaining({
-          name: 'KnittoError',
-          code: Errors.MISSING_TEMPLATE_MANIFEST,
-          message: `Template manifest missing for feature "auth": ${manifestPathFor('/templates/auth')}`,
-        })
-      )
+      expect.objectContaining({
+        name: 'KnittoError',
+        code: Errors.MISSING_TEMPLATE_MANIFEST,
+        message: `Template manifest missing for feature "auth": ${manifestPathFor('/templates/auth')}`,
+      })
+    )
   })
 
   it('plans only manifest operations', async () => {
@@ -833,6 +835,48 @@ describe('OperationSorter', () => {
       'skip-file',
     ])
   })
+
+  it('sorts upsert-env after append-env and before feature copy-file', () => {
+    const sorter = new OperationSorter()
+
+    const operations = sorter.sort([
+      {
+        id: 'copy-1',
+        type: 'copy-file',
+        source: '/templates/auth/.env',
+        target: '/projects/demo-app/.env',
+        renderVariables: true,
+        overwrite: true,
+        origin: { type: 'feature', slug: 'auth' },
+        description: 'Copy env file from auth',
+      },
+      {
+        id: 'upsert-env-1',
+        type: 'upsert-env',
+        target: '/projects/demo-app/.env',
+        values: {
+          DATABASE_URL: 'postgresql://localhost:5432/app',
+        },
+        origin: { type: 'feature', slug: 'auth' },
+        description: 'Upsert env values from auth',
+      },
+      {
+        id: 'append-env-1',
+        type: 'append-env',
+        source: '/templates/auth/.env.example',
+        target: '/projects/demo-app/.env',
+        strategy: 'append-missing',
+        origin: { type: 'feature', slug: 'auth' },
+        description: 'Append env values from auth',
+      },
+    ])
+
+    expect(operations.map((operation) => operation.type)).toEqual([
+      'append-env',
+      'upsert-env',
+      'copy-file',
+    ])
+  })
 })
 
 describe('ConflictDetector', () => {
@@ -993,6 +1037,40 @@ describe('ConflictDetector', () => {
     ])
   })
 
+  it('treats upsert-env as generated content for later copy-file conflicts', () => {
+    const detector = new ConflictDetector()
+    const conflicts = detector.detect([
+      {
+        id: 'upsert-env-1',
+        type: 'upsert-env',
+        target: '/projects/demo-app/.env',
+        values: {
+          DATABASE_URL: 'postgresql://localhost:5432/app',
+        },
+        origin: { type: 'feature', slug: 'auth' },
+        description: 'Upsert env values from auth',
+      },
+      {
+        id: 'copy-1',
+        type: 'copy-file',
+        source: '/templates/auth/.env',
+        target: '/projects/demo-app/.env',
+        overwrite: true,
+        renderVariables: true,
+        origin: { type: 'feature', slug: 'auth' },
+        description: 'Copy env file from auth',
+      },
+    ])
+
+    expect(conflicts).toEqual([
+      expect.objectContaining({
+        code: 'DUPLICATE_UNSAFE_WRITE',
+        target: '/projects/demo-app/.env',
+        operationIds: ['upsert-env-1', 'copy-1'],
+      }),
+    ])
+  })
+
   it('allows kit copy-file before feature merge-package-json on the same target', () => {
     const detector = new ConflictDetector()
     const conflicts = detector.detect([
@@ -1048,7 +1126,9 @@ describe('ConflictDetector', () => {
 
   it('skips sparse entries when scanning for destructive copy collisions', () => {
     const detector = new ConflictDetector()
-    const operations = new Array<Parameters<ConflictDetector['detect']>[0][number]>(3)
+    const operations = new Array<
+      Parameters<ConflictDetector['detect']>[0][number]
+    >(3)
     operations[1] = {
       id: 'append-readme-1',
       type: 'append-readme',

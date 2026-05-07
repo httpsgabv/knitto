@@ -11,12 +11,14 @@ import { AstNestAddModuleImportHandler } from './ast-nest-add-module-import.hand
 import { CopyFileHandler } from './copy-file.handler'
 import { MergePackageJsonHandler } from './merge-package-json.handler'
 import { SkipFileHandler } from './skip-file.handler'
+import { UpsertEnvHandler } from './upsert-env.handler'
 
 export function createHandlers(): OperationHandlerRegistry {
   const handlers: OperationHandlerRecord = {
     'copy-file': new CopyFileHandler(),
     'merge-package-json': new MergePackageJsonHandler(),
     'append-env': new AppendEnvHandler(),
+    'upsert-env': new UpsertEnvHandler(),
     'append-readme': new AppendReadmeHandler(),
     'skip-file': new SkipFileHandler(),
     'ast.add-named-import': new AstAddNamedImportHandler(),

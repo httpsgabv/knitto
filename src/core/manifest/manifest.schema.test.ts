@@ -155,6 +155,14 @@ describe('ManifestSchema', () => {
         source: 'template/.env',
       },
       {
+        type: 'upsert-env',
+        target: '.env',
+        values: {
+          DATABASE_URL: 'postgresql://localhost:5432/app',
+          POSTGRES_USER: 'postgres',
+        },
+      },
+      {
         type: 'append-readme',
         source: 'template/README.snippet.md',
         heading: 'Setup',
@@ -162,12 +170,12 @@ describe('ManifestSchema', () => {
       {
         type: 'add-all',
       },
-        {
-          type: 'ast.add-named-import',
-          target: 'src/main.ts',
-          named: 'setup',
-          from: './setup',
-        },
+      {
+        type: 'ast.add-named-import',
+        target: 'src/main.ts',
+        named: 'setup',
+        from: './setup',
+      },
       {
         type: 'ast.nest.add-module-import',
         target: 'src/app.module.ts',
@@ -202,9 +210,11 @@ describe('ManifestSchema', () => {
       },
     ]
 
-    const result = operations.map((operation) => ManifestOperationSchema.parse(operation))
+    const result = operations.map((operation) =>
+      ManifestOperationSchema.parse(operation)
+    )
 
-    expect(result).toHaveLength(8)
+    expect(result).toHaveLength(9)
     expect(result[0]).toEqual({
       type: 'copy-file',
       source: 'templates/.env.example',
@@ -225,21 +235,29 @@ describe('ManifestSchema', () => {
       strategy: 'append-missing',
     })
     expect(result[3]).toEqual({
+      type: 'upsert-env',
+      target: '.env',
+      values: {
+        DATABASE_URL: 'postgresql://localhost:5432/app',
+        POSTGRES_USER: 'postgres',
+      },
+    })
+    expect(result[4]).toEqual({
       type: 'append-readme',
       source: 'template/README.snippet.md',
       target: 'README.md',
       heading: 'Setup',
     })
-    expect(result[4]).toEqual({
+    expect(result[5]).toEqual({
       type: 'add-all',
     })
-    expect(result[5]).toEqual({
+    expect(result[6]).toEqual({
       type: 'ast.add-named-import',
       target: 'src/main.ts',
       named: 'setup',
       from: './setup',
     })
-    expect(result[6]).toEqual({
+    expect(result[7]).toEqual({
       type: 'ast.nest.add-module-import',
       target: 'src/app.module.ts',
       import: {
@@ -248,7 +266,7 @@ describe('ManifestSchema', () => {
       },
       moduleName: 'AuthModule',
     })
-    expect(result[7]).toEqual({
+    expect(result[8]).toEqual({
       type: 'ast.nest.add-bootstrap-call',
       target: 'src/main.ts',
       appVar: 'app',
@@ -412,7 +430,9 @@ describe('ManifestSchema', () => {
       },
     })
 
-    expectTypeOf(result).toEqualTypeOf<AstNestAddBootstrapCallManifestOperation>()
+    expectTypeOf(
+      result
+    ).toEqualTypeOf<AstNestAddBootstrapCallManifestOperation>()
   })
 
   it('rejects invalid identifier-like bootstrap fields at schema validation time', () => {
@@ -451,7 +471,9 @@ describe('ManifestSchema', () => {
       },
     })
 
-    expectTypeOf(result).toEqualTypeOf<AstNestAddBootstrapVariableManifestOperation>()
+    expectTypeOf(
+      result
+    ).toEqualTypeOf<AstNestAddBootstrapVariableManifestOperation>()
   })
 
   it('preserves concrete bootstrap method call types for parsed operations', () => {
@@ -467,6 +489,8 @@ describe('ManifestSchema', () => {
       arguments: [{ kind: 'identifier', name: 'context' }],
     })
 
-    expectTypeOf(result).toEqualTypeOf<AstNestAddBootstrapMethodCallManifestOperation>()
+    expectTypeOf(
+      result
+    ).toEqualTypeOf<AstNestAddBootstrapMethodCallManifestOperation>()
   })
 })

@@ -31,6 +31,12 @@ export type AppendEnvOperation = BaseOperation & {
   strategy: 'append-missing'
 }
 
+export type UpsertEnvOperation = BaseOperation & {
+  type: 'upsert-env'
+  target: string
+  values: Record<string, string>
+}
+
 export type AppendReadmeOperation = BaseOperation & {
   type: 'append-readme'
   source: string
@@ -48,5 +54,6 @@ export type FileOperation =
   | CopyFileOperation
   | MergePackageJsonOperation
   | AppendEnvOperation
+  | UpsertEnvOperation
   | AppendReadmeOperation
   | SkipFileOperation

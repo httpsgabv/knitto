@@ -13,6 +13,7 @@ import {
   ManifestOperationSchema,
   MergePackageJsonManifestOperationSchema,
   AstAddSideEffectImportManifestOperationSchema,
+  UpsertEnvManifestOperationSchema,
 } from './manifest-operation.schema'
 
 export type AddAllManifestOperation = z.infer<
@@ -29,6 +30,10 @@ export type MergePackageJsonManifestOperation = z.infer<
 
 export type AppendEnvManifestOperation = z.infer<
   typeof AppendEnvManifestOperationSchema
+>
+
+export type UpsertEnvManifestOperation = z.infer<
+  typeof UpsertEnvManifestOperationSchema
 >
 
 export type AppendReadmeManifestOperation = z.infer<
