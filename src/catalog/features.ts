@@ -71,4 +71,18 @@ export const officialFeatures: Feature[] = [
     requires: [],
     conflictsWith: [],
   },
+  {
+    slug: 'husky-git-hooks',
+    name: 'Husky + Git Hooks',
+    description: 'Add a basic Husky + Git Hooks setup.',
+    source: {
+      type: 'github',
+      repo: 'httpsgabv/knitto-templates',
+      name: 'husky-git-hooks',
+      path: '/features/',
+    },
+    supports: ['nestjs'],
+    requires: [],
+    conflictsWith: [],
+  },
 ]

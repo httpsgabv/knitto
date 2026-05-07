@@ -17,6 +17,7 @@ export const officialKits: Kit[] = [
       'scalar-nest',
       'helmet-nest',
       'throttler-nest',
+      'husky-git-hooks',
     ],
   },
 ]
