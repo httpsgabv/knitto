@@ -39,7 +39,6 @@ const createApp = vi.fn()
 const makeCreateFlow = vi.fn()
 const registerCreateCommand = vi.fn()
 const registerListKitsCommand = vi.fn()
-const registerDoctorCommand = vi.fn()
 const registerListFeaturesCommand = vi.fn()
 const printer = { error: vi.fn() }
 const formatError = vi.fn(() => 'formatted error')
@@ -61,10 +60,6 @@ vi.mock('./commands/create.command', () => ({
 
 vi.mock('./commands/list-kits.command', () => ({
   registerListKitsCommand,
-}))
-
-vi.mock('./commands/doctor.command', () => ({
-  registerDoctorCommand,
 }))
 
 vi.mock('./commands/list-features.command', () => ({
@@ -137,7 +132,6 @@ describe('cli/main', () => {
       rootCommand.listCommand,
       app.catalog
     )
-    expect(registerDoctorCommand).toHaveBeenCalledWith(rootCommand)
     expect(runCreateFlow).not.toHaveBeenCalled()
   })
 

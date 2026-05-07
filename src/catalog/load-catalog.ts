@@ -1,7 +1,7 @@
 import type { RemoteCatalogClient } from '@adapters/github-catalog/remote-catalog-client'
-import { OfficialCatalog } from '../official-catalog'
-import { officialKits } from '../kits'
-import { officialFeatures } from '../features'
+import { OfficialCatalog } from './official-catalog'
+import { officialKits } from './kits'
+import { officialFeatures } from './features'
 
 export async function loadCatalog(deps: {
   remoteCatalogClient: RemoteCatalogClient

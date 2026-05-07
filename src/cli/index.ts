@@ -2,7 +2,6 @@ import { Command } from 'commander'
 import { createApp } from './bootstrap'
 import { registerCreateCommand } from './commands/create.command'
 import { registerListKitsCommand } from './commands/list-kits.command'
-import { registerDoctorCommand } from './commands/doctor.command'
 import { registerListFeaturesCommand } from './commands/list-features.command'
 import { printer } from './output/printer'
 import { formatError } from './output/format-error'
@@ -32,7 +31,6 @@ export async function main(): Promise<void> {
   const list = program.command('list').description('List catalog items')
   registerListKitsCommand(list, app.catalog)
   registerListFeaturesCommand(list, app.catalog)
-  registerDoctorCommand(program)
 
   try {
     await program.parseAsync(process.argv)
