@@ -7,6 +7,7 @@ describe('createHandlers', () => {
 
     expect(handlers.get('copy-file')?.type).toBe('copy-file')
     expect(handlers.get('merge-package-json')?.type).toBe('merge-package-json')
+    expect(handlers.get('merge-json')?.type).toBe('merge-json')
     expect(handlers.get('append-env')?.type).toBe('append-env')
     expect(handlers.get('upsert-env')?.type).toBe('upsert-env')
     expect(handlers.get('append-lines')?.type).toBe('append-lines')

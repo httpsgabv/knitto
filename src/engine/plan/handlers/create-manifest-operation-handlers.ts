@@ -12,12 +12,14 @@ import { AstNestAddBootstrapVariableManifestOperationHandler } from './ast-nest-
 import { AstNestAddModuleImportManifestOperationHandler } from './ast-nest-add-module-import-manifest-operation.handler'
 import { CopyFileManifestOperationHandler } from './copy-file-manifest-operation.handler'
 import { MergePackageJsonManifestOperationHandler } from './merge-package-json-manifest-operation.handler'
+import { MergeJsonManifestOperationHandler } from './merge-json-manifest-operation.handler'
 import { UpsertEnvManifestOperationHandler } from './upsert-env-manifest-operation.handler'
 
 export function createManifestOperationHandlers(): ManifestOperationHandlerRegistry {
   const handlers: ManifestOperationHandlerRecord = {
     'copy-file': new CopyFileManifestOperationHandler(),
     'merge-package-json': new MergePackageJsonManifestOperationHandler(),
+    'merge-json': new MergeJsonManifestOperationHandler(),
     'append-env': new AppendEnvManifestOperationHandler(),
     'upsert-env': new UpsertEnvManifestOperationHandler(),
     'append-lines': new AppendLinesManifestOperationHandler(),

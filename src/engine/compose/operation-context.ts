@@ -4,6 +4,7 @@ import type { NestBootstrapEditor } from '@engine/ast/nest-bootstrap-editor'
 import type { NestModuleEditor } from '@engine/ast/nest-module-editor'
 import type { SourceFileEditor } from '@engine/ast/source-file-editor'
 import type { PackageJsonMerger } from '@engine/merge/package-json-merger'
+import type { JsonFileMerger } from '@engine/merge/json-file-merger'
 import type { EnvMerger } from '../merge/env-merger'
 import type { LineAppender } from '../merge/line-appender'
 import type { ReadmeMerger } from '../merge/readme-merger'
@@ -13,6 +14,7 @@ export type OperationContext = {
   fileSystem: FileSystem
   variableRenderer: VariableRenderer
   packageJsonMerger: PackageJsonMerger
+  jsonFileMerger: JsonFileMerger
   envMerger: EnvMerger
   lineAppender: LineAppender
   readmeMerger: ReadmeMerger

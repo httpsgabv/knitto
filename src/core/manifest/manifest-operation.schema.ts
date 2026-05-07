@@ -185,6 +185,13 @@ export const AddPackageScriptsManifestOperationSchema = z.object({
   scripts: z.record(z.string(), z.string()),
 })
 
+export const MergeJsonManifestOperationSchema = z.object({
+  type: z.literal('merge-json'),
+  source: z.string().min(1),
+  target: z.string().min(1),
+  strategy: z.literal('deep-merge').default('deep-merge'),
+})
+
 export const AppendReadmeManifestOperationSchema = z.object({
   type: z.literal('append-readme'),
   source: z.string().min(1),
@@ -250,6 +257,7 @@ export const ManifestOperationSchema = z.discriminatedUnion('type', [
   UpsertEnvManifestOperationSchema,
   AppendLinesManifestOperationSchema,
   AddPackageScriptsManifestOperationSchema,
+  MergeJsonManifestOperationSchema,
   AppendReadmeManifestOperationSchema,
   AstAddNamedImportManifestOperationSchema,
   AstAddSideEffectImportManifestOperationSchema,

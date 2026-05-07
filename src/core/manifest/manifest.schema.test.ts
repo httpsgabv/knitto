@@ -176,6 +176,12 @@ describe('ManifestSchema', () => {
         },
       },
       {
+        type: 'merge-json',
+        source: 'tsconfig.patch.json',
+        target: 'tsconfig.json',
+        strategy: 'deep-merge',
+      },
+      {
         type: 'append-readme',
         source: 'template/README.snippet.md',
         heading: 'Setup',
@@ -227,7 +233,7 @@ describe('ManifestSchema', () => {
       ManifestOperationSchema.parse(operation)
     )
 
-    expect(result).toHaveLength(11)
+    expect(result).toHaveLength(12)
     expect(result[0]).toEqual({
       type: 'copy-file',
       source: 'templates/.env.example',
@@ -269,21 +275,27 @@ describe('ManifestSchema', () => {
       },
     })
     expect(result[6]).toEqual({
+      type: 'merge-json',
+      source: 'tsconfig.patch.json',
+      target: 'tsconfig.json',
+      strategy: 'deep-merge',
+    })
+    expect(result[7]).toEqual({
       type: 'append-readme',
       source: 'template/README.snippet.md',
       target: 'README.md',
       heading: 'Setup',
     })
-    expect(result[7]).toEqual({
+    expect(result[8]).toEqual({
       type: 'add-all',
     })
-    expect(result[8]).toEqual({
+    expect(result[9]).toEqual({
       type: 'ast.add-named-import',
       target: 'src/main.ts',
       named: 'setup',
       from: './setup',
     })
-    expect(result[9]).toEqual({
+    expect(result[10]).toEqual({
       type: 'ast.nest.add-module-import',
       target: 'src/app.module.ts',
       import: {
@@ -292,7 +304,7 @@ describe('ManifestSchema', () => {
       },
       moduleName: 'AuthModule',
     })
-    expect(result[10]).toEqual({
+    expect(result[11]).toEqual({
       type: 'ast.nest.add-bootstrap-call',
       target: 'src/main.ts',
       appVar: 'app',

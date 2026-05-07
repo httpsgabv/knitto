@@ -4,6 +4,7 @@ import {
   AppendEnvManifestOperationSchema,
   AppendLinesManifestOperationSchema,
   AddPackageScriptsManifestOperationSchema,
+  MergeJsonManifestOperationSchema,
   AppendReadmeManifestOperationSchema,
   AstAddNamedImportManifestOperationSchema,
   AstBootstrapExpressionSchema,
@@ -44,6 +45,10 @@ export type AppendLinesManifestOperation = z.infer<
 
 export type AddPackageScriptsManifestOperation = z.infer<
   typeof AddPackageScriptsManifestOperationSchema
+>
+
+export type MergeJsonManifestOperation = z.infer<
+  typeof MergeJsonManifestOperationSchema
 >
 
 export type AppendReadmeManifestOperation = z.infer<

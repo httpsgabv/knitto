@@ -960,6 +960,47 @@ describe('OperationSorter', () => {
       'upsert-env',
     ])
   })
+
+  it('sorts merge-json after add-package-scripts and before append-env', () => {
+    const sorter = new OperationSorter()
+
+    const operations = sorter.sort([
+      {
+        id: 'append-env-1',
+        type: 'append-env',
+        source: '/templates/prisma/.env.example',
+        target: '/projects/demo-app/.env.example',
+        strategy: 'append-missing',
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Append env values from prisma',
+      },
+      {
+        id: 'merge-json-1',
+        type: 'merge-json',
+        source: '/templates/prisma/tsconfig.patch.json',
+        target: '/projects/demo-app/tsconfig.json',
+        strategy: 'deep-merge',
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Merge json config from prisma',
+      },
+      {
+        id: 'add-package-scripts-1',
+        type: 'add-package-scripts',
+        target: '/projects/demo-app/package.json',
+        scripts: {
+          'db:generate': 'prisma generate',
+        },
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Add package scripts from prisma',
+      },
+    ])
+
+    expect(operations.map((operation) => operation.type)).toEqual([
+      'add-package-scripts',
+      'merge-json',
+      'append-env',
+    ])
+  })
 })
 
 describe('ConflictDetector', () => {
@@ -1216,6 +1257,39 @@ describe('ConflictDetector', () => {
         code: 'DUPLICATE_UNSAFE_WRITE',
         target: '/projects/demo-app/package.json',
         operationIds: ['add-package-scripts-1', 'copy-1'],
+      }),
+    ])
+  })
+
+  it('treats merge-json as generated content for later copy-file conflicts', () => {
+    const detector = new ConflictDetector()
+    const conflicts = detector.detect([
+      {
+        id: 'merge-json-1',
+        type: 'merge-json',
+        source: '/templates/prisma/tsconfig.patch.json',
+        target: '/projects/demo-app/tsconfig.json',
+        strategy: 'deep-merge',
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Merge json config from prisma',
+      },
+      {
+        id: 'copy-1',
+        type: 'copy-file',
+        source: '/templates/prisma/tsconfig.json',
+        target: '/projects/demo-app/tsconfig.json',
+        overwrite: true,
+        renderVariables: true,
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Copy tsconfig from prisma',
+      },
+    ])
+
+    expect(conflicts).toEqual([
+      expect.objectContaining({
+        code: 'DUPLICATE_UNSAFE_WRITE',
+        target: '/projects/demo-app/tsconfig.json',
+        operationIds: ['merge-json-1', 'copy-1'],
       }),
     ])
   })

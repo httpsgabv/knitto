@@ -17,25 +17,28 @@ export class OperationSorter {
     if (operation.type === 'add-package-scripts') {
       return 3
     }
-    if (operation.type === 'append-env') {
+    if (operation.type === 'merge-json') {
       return 4
     }
-    if (operation.type === 'upsert-env') {
+    if (operation.type === 'append-env') {
       return 5
     }
-    if (operation.type === 'append-lines') {
+    if (operation.type === 'upsert-env') {
       return 6
     }
-    if (operation.type === 'append-readme') {
+    if (operation.type === 'append-lines') {
       return 7
     }
-    if (operation.type === 'copy-file') {
+    if (operation.type === 'append-readme') {
       return 8
     }
-    if (operation.type.startsWith('ast.')) {
+    if (operation.type === 'copy-file') {
       return 9
     }
+    if (operation.type.startsWith('ast.')) {
+      return 10
+    }
 
-    return 10
+    return 11
   }
 }

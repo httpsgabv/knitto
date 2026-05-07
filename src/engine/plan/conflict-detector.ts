@@ -52,6 +52,7 @@ export class ConflictDetector {
   private isMergeOrAppendOperation(operation: GenerationOperation): boolean {
     return (
       operation.type === 'merge-package-json' ||
+      operation.type === 'merge-json' ||
       operation.type === 'add-package-scripts' ||
       operation.type === 'append-env' ||
       operation.type === 'upsert-env' ||

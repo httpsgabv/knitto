@@ -49,6 +49,13 @@ export type AddPackageScriptsOperation = BaseOperation & {
   scripts: Record<string, string>
 }
 
+export type MergeJsonOperation = BaseOperation & {
+  type: 'merge-json'
+  source: string
+  target: string
+  strategy: 'deep-merge'
+}
+
 export type AppendReadmeOperation = BaseOperation & {
   type: 'append-readme'
   source: string
@@ -69,5 +76,6 @@ export type FileOperation =
   | UpsertEnvOperation
   | AppendLinesOperation
   | AddPackageScriptsOperation
+  | MergeJsonOperation
   | AppendReadmeOperation
   | SkipFileOperation

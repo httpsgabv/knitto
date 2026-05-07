@@ -12,6 +12,7 @@ import { AstNestAddBootstrapVariableHandler } from './ast-nest-add-bootstrap-var
 import { AstNestAddModuleImportHandler } from './ast-nest-add-module-import.handler'
 import { CopyFileHandler } from './copy-file.handler'
 import { MergePackageJsonHandler } from './merge-package-json.handler'
+import { MergeJsonHandler } from './merge-json.handler'
 import { SkipFileHandler } from './skip-file.handler'
 import { UpsertEnvHandler } from './upsert-env.handler'
 
@@ -19,6 +20,7 @@ export function createHandlers(): OperationHandlerRegistry {
   const handlers: OperationHandlerRecord = {
     'copy-file': new CopyFileHandler(),
     'merge-package-json': new MergePackageJsonHandler(),
+    'merge-json': new MergeJsonHandler(),
     'add-package-scripts': new AddPackageScriptsHandler(),
     'append-env': new AppendEnvHandler(),
     'upsert-env': new UpsertEnvHandler(),
