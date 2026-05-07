@@ -42,7 +42,10 @@ describe('CopyFileHandler', () => {
     expect(fileSystem.getCalls()).toEqual([
       { method: 'readFile', args: ['/template/README.md', 'utf-8'] },
       { method: 'ensureDir', args: ['/project/docs'] },
-      { method: 'writeFile', args: ['/project/docs/README.md', 'Hello Knitto!'] },
+      {
+        method: 'writeFile',
+        args: ['/project/docs/README.md', 'Hello Knitto!'],
+      },
     ])
   })
 
@@ -78,7 +81,45 @@ describe('CopyFileHandler', () => {
     expect(fileSystem.getCalls()).toEqual([
       { method: 'readFile', args: ['/template/README.md', 'utf-8'] },
       { method: 'ensureDir', args: ['/project/docs'] },
-      { method: 'writeFile', args: ['/project/docs/README.md', 'Hello {{name}}!'] },
+      {
+        method: 'writeFile',
+        args: ['/project/docs/README.md', 'Hello {{name}}!'],
+      },
+    ])
+  })
+
+  it('does not overwrite an existing target when overwrite is false', async () => {
+    const fileSystem = new FakeFileSystem()
+    fileSystem.addFile('/template/README.md', 'Hello {{name}}!')
+    fileSystem.addFile('/project/docs/README.md', 'Existing content')
+
+    const handler = new CopyFileHandler()
+    const operation: CopyFileOperation = {
+      id: 'op-3',
+      type: 'copy-file',
+      origin: { type: 'kit', slug: 'base' },
+      description: 'copy readme without overwriting',
+      source: '/template/README.md',
+      target: '/project/docs/README.md',
+      renderVariables: true,
+      overwrite: false,
+    }
+
+    await handler.execute(operation, {
+      fileSystem,
+      variableRenderer: new VariableRenderer(),
+      packageJsonMerger: {} as never,
+      envMerger: {} as never,
+      readmeMerger: {} as never,
+      sourceFileEditor: new SourceFileEditor(new TsMorphProjectFactory()),
+      importEditor: new ImportEditor(),
+      nestModuleEditor: new NestModuleEditor(),
+      nestBootstrapEditor: new NestBootstrapEditor(),
+      variables: { name: 'Knitto' },
+    })
+
+    expect(fileSystem.getCalls()).toEqual([
+      { method: 'pathExists', args: ['/project/docs/README.md'] },
     ])
   })
 })

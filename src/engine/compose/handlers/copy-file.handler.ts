@@ -13,6 +13,13 @@ export class CopyFileHandler implements OperationHandler<CopyFileOperation> {
       variables,
     }: Parameters<OperationHandler<CopyFileOperation>['execute']>[1]
   ) {
+    if (
+      !operation.overwrite &&
+      (await fileSystem.pathExists(operation.target))
+    ) {
+      return
+    }
+
     const content = await fileSystem.readFile(operation.source, 'utf-8')
     const rendered = operation.renderVariables
       ? variableRenderer.render(operation.source, content, variables)
