@@ -1,3 +1,4 @@
+import { Errors } from '@core/errors/errors'
 import { describe, expect, it } from 'vitest'
 import { FakeFileSystem } from '../../../test/adapters/fs/fake-file-system'
 import { PackageJsonMerger } from './package-json-merger'
@@ -122,6 +123,57 @@ describe('PackageJsonMerger', () => {
 
     expect(await fileSystem.readJson('/project/package.json')).toEqual({
       scripts: {},
+    })
+  })
+
+  it('adds scripts to an existing package.json without overwriting different values', async () => {
+    const fileSystem = new FakeFileSystem()
+    const merger = new PackageJsonMerger(fileSystem)
+
+    fileSystem.addFile(
+      '/project/package.json',
+      JSON.stringify({
+        name: 'app-project',
+        scripts: {
+          dev: 'vite',
+        },
+      })
+    )
+
+    await merger.addScripts('/project/package.json', {
+      'db:generate': 'prisma generate',
+      dev: 'vite',
+    })
+
+    expect(await fileSystem.readJson('/project/package.json')).toEqual({
+      name: 'app-project',
+      scripts: {
+        'db:generate': 'prisma generate',
+        dev: 'vite',
+      },
+    })
+  })
+
+  it('throws when adding a script that already exists with a different value', async () => {
+    const fileSystem = new FakeFileSystem()
+    const merger = new PackageJsonMerger(fileSystem)
+
+    fileSystem.addFile(
+      '/project/package.json',
+      JSON.stringify({
+        scripts: {
+          dev: 'vite',
+        },
+      })
+    )
+
+    await expect(
+      merger.addScripts('/project/package.json', {
+        dev: 'next dev',
+      })
+    ).rejects.toMatchObject({
+      name: 'KnittoError',
+      code: Errors.PACKAGE_JSON_SCRIPT_CONFLICT,
     })
   })
 })

@@ -10,6 +10,9 @@ describe('createHandlers', () => {
     expect(handlers.get('append-env')?.type).toBe('append-env')
     expect(handlers.get('upsert-env')?.type).toBe('upsert-env')
     expect(handlers.get('append-lines')?.type).toBe('append-lines')
+    expect(handlers.get('add-package-scripts')?.type).toBe(
+      'add-package-scripts'
+    )
     expect(handlers.get('append-readme')?.type).toBe('append-readme')
     expect(handlers.get('skip-file')?.type).toBe('skip-file')
     expect(handlers.get('ast.add-named-import')?.type).toBe(

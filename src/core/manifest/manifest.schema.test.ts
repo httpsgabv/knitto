@@ -168,6 +168,14 @@ describe('ManifestSchema', () => {
         lines: ['/src/generated/prisma', '.env'],
       },
       {
+        type: 'add-package-scripts',
+        target: 'package.json',
+        scripts: {
+          'db:generate': 'prisma generate',
+          'db:studio': 'prisma studio',
+        },
+      },
+      {
         type: 'append-readme',
         source: 'template/README.snippet.md',
         heading: 'Setup',
@@ -219,7 +227,7 @@ describe('ManifestSchema', () => {
       ManifestOperationSchema.parse(operation)
     )
 
-    expect(result).toHaveLength(10)
+    expect(result).toHaveLength(11)
     expect(result[0]).toEqual({
       type: 'copy-file',
       source: 'templates/.env.example',
@@ -253,21 +261,29 @@ describe('ManifestSchema', () => {
       lines: ['/src/generated/prisma', '.env'],
     })
     expect(result[5]).toEqual({
+      type: 'add-package-scripts',
+      target: 'package.json',
+      scripts: {
+        'db:generate': 'prisma generate',
+        'db:studio': 'prisma studio',
+      },
+    })
+    expect(result[6]).toEqual({
       type: 'append-readme',
       source: 'template/README.snippet.md',
       target: 'README.md',
       heading: 'Setup',
     })
-    expect(result[6]).toEqual({
+    expect(result[7]).toEqual({
       type: 'add-all',
     })
-    expect(result[7]).toEqual({
+    expect(result[8]).toEqual({
       type: 'ast.add-named-import',
       target: 'src/main.ts',
       named: 'setup',
       from: './setup',
     })
-    expect(result[8]).toEqual({
+    expect(result[9]).toEqual({
       type: 'ast.nest.add-module-import',
       target: 'src/app.module.ts',
       import: {
@@ -276,7 +292,7 @@ describe('ManifestSchema', () => {
       },
       moduleName: 'AuthModule',
     })
-    expect(result[9]).toEqual({
+    expect(result[10]).toEqual({
       type: 'ast.nest.add-bootstrap-call',
       target: 'src/main.ts',
       appVar: 'app',

@@ -918,6 +918,48 @@ describe('OperationSorter', () => {
       'copy-file',
     ])
   })
+
+  it('sorts add-package-scripts after merge-package-json and before upsert-env', () => {
+    const sorter = new OperationSorter()
+
+    const operations = sorter.sort([
+      {
+        id: 'upsert-env-1',
+        type: 'upsert-env',
+        target: '/projects/demo-app/.env',
+        values: {
+          DATABASE_URL: 'postgresql://localhost:5432/app',
+        },
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Upsert env values from prisma',
+      },
+      {
+        id: 'add-package-scripts-1',
+        type: 'add-package-scripts',
+        target: '/projects/demo-app/package.json',
+        scripts: {
+          'db:generate': 'prisma generate',
+        },
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Add package scripts from prisma',
+      },
+      {
+        id: 'merge-package-json-1',
+        type: 'merge-package-json',
+        source: '/templates/prisma/package.partial.json',
+        target: '/projects/demo-app/package.json',
+        strategy: 'safe-merge',
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Merge package.json from prisma',
+      },
+    ])
+
+    expect(operations.map((operation) => operation.type)).toEqual([
+      'merge-package-json',
+      'add-package-scripts',
+      'upsert-env',
+    ])
+  })
 })
 
 describe('ConflictDetector', () => {
@@ -1140,6 +1182,40 @@ describe('ConflictDetector', () => {
         code: 'DUPLICATE_UNSAFE_WRITE',
         target: '/projects/demo-app/.gitignore',
         operationIds: ['append-lines-1', 'copy-1'],
+      }),
+    ])
+  })
+
+  it('treats add-package-scripts as generated content for later copy-file conflicts', () => {
+    const detector = new ConflictDetector()
+    const conflicts = detector.detect([
+      {
+        id: 'add-package-scripts-1',
+        type: 'add-package-scripts',
+        target: '/projects/demo-app/package.json',
+        scripts: {
+          'db:generate': 'prisma generate',
+        },
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Add package scripts from prisma',
+      },
+      {
+        id: 'copy-1',
+        type: 'copy-file',
+        source: '/templates/prisma/package.json',
+        target: '/projects/demo-app/package.json',
+        overwrite: true,
+        renderVariables: true,
+        origin: { type: 'feature', slug: 'prisma' },
+        description: 'Copy package.json from prisma',
+      },
+    ])
+
+    expect(conflicts).toEqual([
+      expect.objectContaining({
+        code: 'DUPLICATE_UNSAFE_WRITE',
+        target: '/projects/demo-app/package.json',
+        operationIds: ['add-package-scripts-1', 'copy-1'],
       }),
     ])
   })

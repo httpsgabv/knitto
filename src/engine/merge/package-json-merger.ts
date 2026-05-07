@@ -1,4 +1,6 @@
 import type { FileSystem } from '@adapters/fs/file-system'
+import { Errors } from '@core/errors/errors'
+import { KnittoError } from '@core/errors/knitto-error'
 import { sortObjectKeys } from '@shared/json'
 import { JsonMerger } from './json-merger'
 
@@ -62,5 +64,34 @@ export class PackageJsonMerger extends JsonMerger {
     }
 
     await this.fileSystem.writeJson(target, result)
+  }
+
+  async addScripts(target: string, scripts: Record<string, string>) {
+    const targetJson = (await this.fileSystem.pathExists(target))
+      ? ((await this.fileSystem.readJson<PackageJsonShape>(target)) ?? {})
+      : {}
+
+    const nextScripts = { ...(targetJson.scripts ?? {}) }
+
+    for (const [name, value] of Object.entries(scripts)) {
+      const existingValue = nextScripts[name]
+
+      if (existingValue === undefined) {
+        nextScripts[name] = value
+        continue
+      }
+
+      if (existingValue !== value) {
+        throw new KnittoError(
+          `Script "${name}" already exists in package.json with a different value.`,
+          Errors.PACKAGE_JSON_SCRIPT_CONFLICT
+        )
+      }
+    }
+
+    await this.fileSystem.writeJson(target, {
+      ...targetJson,
+      scripts: sortObjectKeys(nextScripts),
+    })
   }
 }

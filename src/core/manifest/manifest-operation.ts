@@ -3,6 +3,7 @@ import {
   AddAllManifestOperationSchema,
   AppendEnvManifestOperationSchema,
   AppendLinesManifestOperationSchema,
+  AddPackageScriptsManifestOperationSchema,
   AppendReadmeManifestOperationSchema,
   AstAddNamedImportManifestOperationSchema,
   AstBootstrapExpressionSchema,
@@ -39,6 +40,10 @@ export type UpsertEnvManifestOperation = z.infer<
 
 export type AppendLinesManifestOperation = z.infer<
   typeof AppendLinesManifestOperationSchema
+>
+
+export type AddPackageScriptsManifestOperation = z.infer<
+  typeof AddPackageScriptsManifestOperationSchema
 >
 
 export type AppendReadmeManifestOperation = z.infer<

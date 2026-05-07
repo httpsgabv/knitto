@@ -43,6 +43,12 @@ export type AppendLinesOperation = BaseOperation & {
   lines: string[]
 }
 
+export type AddPackageScriptsOperation = BaseOperation & {
+  type: 'add-package-scripts'
+  target: string
+  scripts: Record<string, string>
+}
+
 export type AppendReadmeOperation = BaseOperation & {
   type: 'append-readme'
   source: string
@@ -62,5 +68,6 @@ export type FileOperation =
   | AppendEnvOperation
   | UpsertEnvOperation
   | AppendLinesOperation
+  | AddPackageScriptsOperation
   | AppendReadmeOperation
   | SkipFileOperation
