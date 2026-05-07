@@ -1,90 +1,104 @@
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { Project, QuoteKind } from 'ts-morph'
+import type { ImportDeclaration, SourceFile } from 'ts-morph'
 import { ImportEditor } from './import-editor'
-import { SourceFileEditor } from './source-file-editor'
-import { TsMorphProjectFactory } from './ts-morph-project-factory'
 
 describe('ImportEditor', () => {
-  it('adds a named import', async () => {
-    const filePath = await writeTempSourceFile('const value = 1\n')
+  it('adds a named import', () => {
+    const sourceFile = createSourceFile('const value = 1\n')
 
-    await editSourceFile(filePath, (sourceFile) => {
-      new ImportEditor().ensureNamedImport(sourceFile, 'ConfigModule', '@nestjs/config')
-    })
+    new ImportEditor().ensureNamedImport(sourceFile, 'ConfigModule', '@nestjs/config')
 
-    await expect(readFile(filePath, 'utf8')).resolves.toContain(
-      "import { ConfigModule } from '@nestjs/config'"
+    expect(sourceFile.getImportDeclarations()).toHaveLength(1)
+    expect(getImportDeclaration(sourceFile, '@nestjs/config').getText()).toBe(
+      "import { ConfigModule } from '@nestjs/config';"
     )
+    expect(getNamedImports(sourceFile, '@nestjs/config')).toEqual([
+      { name: 'ConfigModule', alias: undefined },
+    ])
   })
 
-  it('does not duplicate a named import', async () => {
-    const filePath = await writeTempSourceFile(
+  it('does not duplicate a named import', () => {
+    const sourceFile = createSourceFile(
       "import { ConfigModule } from '@nestjs/config'\n\nconst value = 1\n"
     )
 
-    await editSourceFile(filePath, (sourceFile) => {
-      const importEditor = new ImportEditor()
+    const importEditor = new ImportEditor()
 
-      importEditor.ensureNamedImport(sourceFile, 'ConfigModule', '@nestjs/config')
-      importEditor.ensureNamedImport(sourceFile, 'ConfigModule', '@nestjs/config')
-    })
+    importEditor.ensureNamedImport(sourceFile, 'ConfigModule', '@nestjs/config')
+    importEditor.ensureNamedImport(sourceFile, 'ConfigModule', '@nestjs/config')
 
-    await expect(readFile(filePath, 'utf8')).resolves.toMatch(
-      /^import \{ ConfigModule \} from '@nestjs\/config'/m
-    )
-
-    const content = await readFile(filePath, 'utf8')
-    expect(content.match(/ConfigModule/g)).toHaveLength(1)
+    expect(sourceFile.getImportDeclarations()).toHaveLength(1)
+    expect(getNamedImports(sourceFile, '@nestjs/config')).toEqual([
+      { name: 'ConfigModule', alias: undefined },
+    ])
   })
 
-  it('adds a named import to an existing import declaration', async () => {
-    const filePath = await writeTempSourceFile(
+  it('adds a named import to an existing import declaration', () => {
+    const sourceFile = createSourceFile(
       "import { Module } from '@nestjs/common'\n\n@Module({})\nexport class AppModule {}\n"
     )
 
-    await editSourceFile(filePath, (sourceFile) => {
-      new ImportEditor().ensureNamedImport(sourceFile, 'ConfigModule', '@nestjs/common')
-    })
+    new ImportEditor().ensureNamedImport(sourceFile, 'ConfigModule', '@nestjs/common')
 
-    const content = await readFile(filePath, 'utf8')
-
-    expect(content).toMatch(/import \{[^}]*Module[^}]*ConfigModule[^}]*\} from '@nestjs\/common'/)
+    expect(sourceFile.getImportDeclarations()).toHaveLength(1)
+    expect(getNamedImports(sourceFile, '@nestjs/common')).toEqual([
+      { name: 'Module', alias: undefined },
+      { name: 'ConfigModule', alias: undefined },
+    ])
   })
 
-  it('preserves aliased named imports when adding another import to the same declaration', async () => {
-    const filePath = await writeTempSourceFile(
-      "import { Module as NestModule } from '@nestjs/common'\n\n@NestModule({})\nexport class AppModule {}\n"
+  it('preserves aliased named imports while adding a direct local identifier', () => {
+    const sourceFile = createSourceFile(
+      "import { ConfigModule as NestConfigModule } from '@nestjs/common'\n\nconst value = NestConfigModule\n"
     )
 
-    await editSourceFile(filePath, (sourceFile) => {
-      new ImportEditor().ensureNamedImport(sourceFile, 'ConfigModule', '@nestjs/common')
-    })
+    new ImportEditor().ensureNamedImport(sourceFile, 'ConfigModule', '@nestjs/common')
 
-    const content = await readFile(filePath, 'utf8')
+    expect(sourceFile.getImportDeclarations()).toHaveLength(1)
+    expect(getNamedImports(sourceFile, '@nestjs/common')).toEqual([
+      { name: 'ConfigModule', alias: 'NestConfigModule' },
+      { name: 'ConfigModule', alias: undefined },
+    ])
+  })
 
-    expect(content).toMatch(
-      /import \{[^}]*Module as NestModule[^}]*ConfigModule[^}]*\} from '@nestjs\/common'/
+  it('does not duplicate a named import when an equivalent alias keeps the same local name', () => {
+    const sourceFile = createSourceFile(
+      "import { ConfigModule as ConfigModule } from '@nestjs/common'\n\nconst value = ConfigModule\n"
     )
+
+    new ImportEditor().ensureNamedImport(sourceFile, 'ConfigModule', '@nestjs/common')
+
+    expect(sourceFile.getImportDeclarations()).toHaveLength(1)
+    expect(getNamedImports(sourceFile, '@nestjs/common')).toEqual([
+      { name: 'ConfigModule', alias: 'ConfigModule' },
+    ])
   })
 })
 
-const projectFactory = new TsMorphProjectFactory()
-const sourceFileEditor = new SourceFileEditor(projectFactory)
-
-async function editSourceFile(
-  filePath: string,
-  edit: Parameters<SourceFileEditor['edit']>[1]
-): Promise<void> {
-  await sourceFileEditor.edit(filePath, edit)
+function createSourceFile(content: string): SourceFile {
+  return new Project({
+    useInMemoryFileSystem: true,
+    skipAddingFilesFromTsConfig: true,
+    manipulationSettings: {
+      quoteKind: QuoteKind.Single,
+    },
+  }).createSourceFile('app.module.ts', content)
 }
 
-async function writeTempSourceFile(content: string): Promise<string> {
-  const directory = await mkdtemp(join(tmpdir(), 'knitto-ast-import-editor-'))
-  const filePath = join(directory, 'app.module.ts')
+function getNamedImports(sourceFile: SourceFile, moduleSpecifier: string) {
+  return getImportDeclaration(sourceFile, moduleSpecifier)
+    .getNamedImports()
+    .map((namedImport) => ({
+      name: namedImport.getName(),
+      alias: namedImport.getAliasNode()?.getText(),
+    }))
+}
 
-  await writeFile(filePath, content, 'utf8')
+function getImportDeclaration(sourceFile: SourceFile, moduleSpecifier: string): ImportDeclaration {
+  const importDeclaration = sourceFile.getImportDeclaration(moduleSpecifier)
 
-  return filePath
+  expect(importDeclaration).toBeDefined()
+
+  return importDeclaration!
 }

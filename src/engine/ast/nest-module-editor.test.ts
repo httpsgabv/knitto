@@ -1,57 +1,48 @@
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { Project, QuoteKind, SyntaxKind, type SourceFile } from 'ts-morph'
 import { NestModuleEditor } from './nest-module-editor'
-import { SourceFileEditor } from './source-file-editor'
-import { TsMorphProjectFactory } from './ts-morph-project-factory'
+import { FakeImportEditor } from '@test/engine/ast/fake-import-editor'
 
 describe('NestModuleEditor', () => {
-  it('adds a module to an empty imports array', async () => {
-    const filePath = await writeTempSourceFile(
+  it('adds a module to an empty imports array', () => {
+    const sourceFile = createSourceFile(
       "import { Module } from '@nestjs/common'\n\n@Module({ imports: [] })\nexport class AppModule {}\n"
     )
 
-    await editSourceFile(filePath, (sourceFile) => {
-      new NestModuleEditor().ensureModuleImport({
-        sourceFile,
-        namedImport: {
-          name: 'ConfigModule',
-          from: '@nestjs/config',
-        },
-        moduleName: 'ConfigModule',
-      })
+    new NestModuleEditor().ensureModuleImport({
+      sourceFile,
+      namedImport: {
+        name: 'ConfigModule',
+        from: '@nestjs/config',
+      },
+      moduleName: 'ConfigModule',
     })
 
-    const content = await readFile(filePath, 'utf8')
-
-    expect(content).toContain("import { ConfigModule } from '@nestjs/config'")
-    expect(content).toContain('@Module({ imports: [ConfigModule] })')
+    expect(getModuleImports(sourceFile)).toEqual(['ConfigModule'])
+    expect(getNamedImports(sourceFile, '@nestjs/config')).toEqual([
+      { name: 'ConfigModule', alias: undefined },
+    ])
   })
 
-  it('creates an imports array if missing', async () => {
-    const filePath = await writeTempSourceFile(
+  it('creates an imports array if missing', () => {
+    const sourceFile = createSourceFile(
       "import { Module } from '@nestjs/common'\n\n@Module({})\nexport class AppModule {}\n"
     )
 
-    await editSourceFile(filePath, (sourceFile) => {
-      new NestModuleEditor().ensureModuleImport({
-        sourceFile,
-        namedImport: {
-          name: 'ConfigModule',
-          from: '@nestjs/config',
-        },
-        moduleName: 'ConfigModule',
-      })
+    new NestModuleEditor().ensureModuleImport({
+      sourceFile,
+      namedImport: {
+        name: 'ConfigModule',
+        from: '@nestjs/config',
+      },
+      moduleName: 'ConfigModule',
     })
 
-    const content = await readFile(filePath, 'utf8')
-
-    expect(content).toMatch(/@Module\(\{[\s\S]*imports: \[ConfigModule\][\s\S]*\}\)/)
+    expect(getModuleImports(sourceFile)).toEqual(['ConfigModule'])
   })
 
-  it('does not duplicate a module import', async () => {
-    const filePath = await writeTempSourceFile(
+  it('does not duplicate a module import', () => {
+    const sourceFile = createSourceFile(
       [
         "import { Module } from '@nestjs/common'",
         "import { ConfigModule } from '@nestjs/config'",
@@ -62,34 +53,33 @@ describe('NestModuleEditor', () => {
       ].join('\n')
     )
 
-    await editSourceFile(filePath, (sourceFile) => {
-      const editor = new NestModuleEditor()
+    const editor = new NestModuleEditor()
 
-      editor.ensureModuleImport({
-        sourceFile,
-        namedImport: {
-          name: 'ConfigModule',
-          from: '@nestjs/config',
-        },
-        moduleName: 'ConfigModule',
-      })
-      editor.ensureModuleImport({
-        sourceFile,
-        namedImport: {
-          name: 'ConfigModule',
-          from: '@nestjs/config',
-        },
-        moduleName: 'ConfigModule',
-      })
+    editor.ensureModuleImport({
+      sourceFile,
+      namedImport: {
+        name: 'ConfigModule',
+        from: '@nestjs/config',
+      },
+      moduleName: 'ConfigModule',
+    })
+    editor.ensureModuleImport({
+      sourceFile,
+      namedImport: {
+        name: 'ConfigModule',
+        from: '@nestjs/config',
+      },
+      moduleName: 'ConfigModule',
     })
 
-    const content = await readFile(filePath, 'utf8')
-
-    expect(content.match(/ConfigModule/g)).toHaveLength(2)
+    expect(getModuleImports(sourceFile)).toEqual(['ConfigModule'])
+    expect(getNamedImports(sourceFile, '@nestjs/config')).toEqual([
+      { name: 'ConfigModule', alias: undefined },
+    ])
   })
 
-  it('adds a direct in-scope ConfigModule import when only an aliased import exists', async () => {
-    const filePath = await writeTempSourceFile(
+  it('keeps an aliased import while adding the direct module name', () => {
+    const sourceFile = createSourceFile(
       [
         "import { Module } from '@nestjs/common'",
         "import { ConfigModule as NestConfigModule } from '@nestjs/config'",
@@ -100,7 +90,53 @@ describe('NestModuleEditor', () => {
       ].join('\n')
     )
 
-    await editSourceFile(filePath, (sourceFile) => {
+    new NestModuleEditor().ensureModuleImport({
+      sourceFile,
+      namedImport: {
+        name: 'ConfigModule',
+        from: '@nestjs/config',
+      },
+      moduleName: 'ConfigModule',
+    })
+
+    expect(getNamedImports(sourceFile, '@nestjs/config')).toEqual([
+      { name: 'ConfigModule', alias: 'NestConfigModule' },
+      { name: 'ConfigModule', alias: undefined },
+    ])
+    expect(getModuleImports(sourceFile)).toEqual(['ConfigModule'])
+  })
+
+  it('delegates named import edits to the collaborator', () => {
+    const sourceFile = createSourceFile(
+      "import { Module } from '@nestjs/common'\n\n@Module({ imports: [] })\nexport class AppModule {}\n"
+    )
+    const importEditor = new FakeImportEditor()
+
+    new NestModuleEditor(importEditor.instance).ensureModuleImport({
+      sourceFile,
+      namedImport: {
+        name: 'ConfigModule',
+        from: '@nestjs/config',
+      },
+      moduleName: 'ConfigModule',
+    })
+
+    expect(importEditor.ensureNamedImportCalls).toEqual([
+      {
+        sourceFile,
+        name: 'ConfigModule',
+        moduleSpecifier: '@nestjs/config',
+      },
+    ])
+    expect(getNamedImports(sourceFile, '@nestjs/config')).toEqual([])
+    expect(getModuleImports(sourceFile)).toEqual(['ConfigModule'])
+  })
+
+  it('throws a readable error when @Module is missing', () => {
+    const sourceFile = createSourceFile('export class AppModule {}\n')
+
+    expectKnittoError(
+      () =>
       new NestModuleEditor().ensureModuleImport({
         sourceFile,
         namedImport: {
@@ -108,63 +144,34 @@ describe('NestModuleEditor', () => {
           from: '@nestjs/config',
         },
         moduleName: 'ConfigModule',
-      })
-    })
-
-    const content = await readFile(filePath, 'utf8')
-
-    expect(content).toContain(
-      "import { ConfigModule as NestConfigModule, ConfigModule } from '@nestjs/config'"
+      }),
+      'Could not find a class decorated with @Module in the source file.'
     )
-    expect(content).toContain('@Module({ imports: [ConfigModule] })')
   })
 
-  it('throws a readable error when @Module is missing', async () => {
-    const filePath = await writeTempSourceFile('export class AppModule {}\n')
-
-    await expect(
-      editSourceFile(filePath, (sourceFile) => {
-        new NestModuleEditor().ensureModuleImport({
-          sourceFile,
-          namedImport: {
-            name: 'ConfigModule',
-            from: '@nestjs/config',
-          },
-          moduleName: 'ConfigModule',
-        })
-      })
-    ).rejects.toMatchObject({
-      name: 'KnittoError',
-      message: 'Could not find a class decorated with @Module in the source file.',
-    })
-  })
-
-  it('throws a readable error when @Module metadata is missing', async () => {
-    const filePath = await writeTempSourceFile(
+  it('throws a readable error when @Module metadata is missing', () => {
+    const sourceFile = createSourceFile(
       ["import { Module } from '@nestjs/common'", '', '@Module()', 'export class AppModule {}', ''].join(
         '\n'
       )
     )
 
-    await expect(
-      editSourceFile(filePath, (sourceFile) => {
-        new NestModuleEditor().ensureModuleImport({
-          sourceFile,
-          namedImport: {
-            name: 'ConfigModule',
-            from: '@nestjs/config',
-          },
-          moduleName: 'ConfigModule',
-        })
-      })
-    ).rejects.toMatchObject({
-      name: 'KnittoError',
-      message: 'Could not find a class decorated with @Module in the source file.',
-    })
+    expectKnittoError(
+      () =>
+      new NestModuleEditor().ensureModuleImport({
+        sourceFile,
+        namedImport: {
+          name: 'ConfigModule',
+          from: '@nestjs/config',
+        },
+        moduleName: 'ConfigModule',
+      }),
+      'Could not find a class decorated with @Module in the source file.'
+    )
   })
 
-  it('throws a readable error when imports metadata is not an array', async () => {
-    const filePath = await writeTempSourceFile(
+  it('throws a readable error when imports metadata is not an array', () => {
+    const sourceFile = createSourceFile(
       [
         "import { Module } from '@nestjs/common'",
         '',
@@ -174,25 +181,22 @@ describe('NestModuleEditor', () => {
       ].join('\n')
     )
 
-    await expect(
-      editSourceFile(filePath, (sourceFile) => {
-        new NestModuleEditor().ensureModuleImport({
-          sourceFile,
-          namedImport: {
-            name: 'ConfigModule',
-            from: '@nestjs/config',
-          },
-          moduleName: 'ConfigModule',
-        })
-      })
-    ).rejects.toMatchObject({
-      name: 'KnittoError',
-      message: 'Expected @Module imports metadata to be an array literal.',
-    })
+    expectKnittoError(
+      () =>
+      new NestModuleEditor().ensureModuleImport({
+        sourceFile,
+        namedImport: {
+          name: 'ConfigModule',
+          from: '@nestjs/config',
+        },
+        moduleName: 'ConfigModule',
+      }),
+      'Expected @Module imports metadata to be an array literal.'
+    )
   })
 
-  it('throws a readable error when an existing imports property has an unsupported shape', async () => {
-    const filePath = await writeTempSourceFile(
+  it('throws a readable error when an existing imports property has an unsupported shape', () => {
+    const sourceFile = createSourceFile(
       [
         "import { Module } from '@nestjs/common'",
         'const imports = []',
@@ -203,39 +207,78 @@ describe('NestModuleEditor', () => {
       ].join('\n')
     )
 
-    await expect(
-      editSourceFile(filePath, (sourceFile) => {
-        new NestModuleEditor().ensureModuleImport({
-          sourceFile,
-          namedImport: {
-            name: 'ConfigModule',
-            from: '@nestjs/config',
-          },
-          moduleName: 'ConfigModule',
-        })
-      })
-    ).rejects.toMatchObject({
-      name: 'KnittoError',
-      message: 'Expected @Module imports metadata to use a direct array property assignment.',
-    })
+    expectKnittoError(
+      () =>
+      new NestModuleEditor().ensureModuleImport({
+        sourceFile,
+        namedImport: {
+          name: 'ConfigModule',
+          from: '@nestjs/config',
+        },
+        moduleName: 'ConfigModule',
+      }),
+      'Expected @Module imports metadata to use a direct array property assignment.'
+    )
   })
 })
 
-const projectFactory = new TsMorphProjectFactory()
-const sourceFileEditor = new SourceFileEditor(projectFactory)
-
-async function editSourceFile(
-  filePath: string,
-  edit: Parameters<SourceFileEditor['edit']>[1]
-): Promise<void> {
-  await sourceFileEditor.edit(filePath, edit)
+function createSourceFile(content: string): SourceFile {
+  return new Project({
+    useInMemoryFileSystem: true,
+    skipAddingFilesFromTsConfig: true,
+    manipulationSettings: {
+      quoteKind: QuoteKind.Single,
+    },
+  }).createSourceFile('app.module.ts', content)
 }
 
-async function writeTempSourceFile(content: string): Promise<string> {
-  const directory = await mkdtemp(join(tmpdir(), 'knitto-ast-nest-module-editor-'))
-  const filePath = join(directory, 'app.module.ts')
+function getModuleImports(sourceFile: SourceFile): string[] {
+  return getModuleImportsArray(sourceFile).getElements().map((element) => element.getText())
+}
 
-  await writeFile(filePath, content, 'utf8')
+function getModuleImportsArray(sourceFile: SourceFile) {
+  const moduleDecorator = sourceFile
+    .getClasses()
+    .flatMap((classDeclaration) => classDeclaration.getDecorators())
+    .find((decorator) => decorator.getName() === 'Module')
 
-  return filePath
+  expect(moduleDecorator).toBeDefined()
+
+  const moduleMetadataArgument = moduleDecorator!.getArguments()[0]
+
+  expect(moduleMetadataArgument).toBeDefined()
+
+  const moduleMetadata = moduleMetadataArgument!.asKindOrThrow(SyntaxKind.ObjectLiteralExpression)
+
+  const importsProperty = moduleMetadata.getPropertyOrThrow('imports')
+    .asKindOrThrow(SyntaxKind.PropertyAssignment)
+
+  return importsProperty.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression)
+}
+
+function getNamedImports(sourceFile: SourceFile, moduleSpecifier: string) {
+  const importDeclaration = sourceFile.getImportDeclaration(moduleSpecifier)
+
+  if (!importDeclaration) {
+    return []
+  }
+
+  return importDeclaration.getNamedImports().map((namedImport) => ({
+    name: namedImport.getName(),
+    alias: namedImport.getAliasNode()?.getText(),
+  }))
+}
+
+function expectKnittoError(run: () => void, message: string) {
+  try {
+    run()
+  } catch (error) {
+    expect(error).toMatchObject({
+      name: 'KnittoError',
+      message,
+    })
+    return
+  }
+
+  throw new Error(`Expected KnittoError: ${message}`)
 }
