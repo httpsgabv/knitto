@@ -66,6 +66,26 @@ export class FakeFileSystem implements FileSystem {
     this.files.set(this.normalizePath(path), JSON.stringify(value))
   }
 
+  async copyDir(src: string, dest: string): Promise<void> {
+    this.calls.push({ method: 'copyDir', args: [src, dest] })
+    const normalizedSrc = this.normalizePath(src)
+    const normalizedDest = this.normalizePath(dest)
+
+    this.directories.add(normalizedDest)
+
+    for (const dir of this.directories) {
+      if (dir === normalizedSrc || dir.startsWith(`${normalizedSrc}/`)) {
+        this.directories.add(dir.replace(normalizedSrc, normalizedDest))
+      }
+    }
+
+    for (const [filePath, content] of this.files) {
+      if (filePath.startsWith(`${normalizedSrc}/`)) {
+        this.files.set(filePath.replace(normalizedSrc, normalizedDest), content)
+      }
+    }
+  }
+
   async listFiles(root: string): Promise<string[]> {
     this.calls.push({ method: 'listFiles', args: [root] })
     const normalizedRoot = this.normalizePath(root)

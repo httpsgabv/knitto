@@ -1,16 +1,10 @@
-import type { TemplateSource } from '@core/catalog/template-source'
 import type { TemplateSourceResolver } from './template-source-resolver'
 import tiged from 'tiged'
 
 export class TigedTemplateSourceResolver implements TemplateSourceResolver {
-  async resolve(
-    targetPath: string,
-    source: Extract<TemplateSource, { type: 'github' }>
-  ): Promise<void> {
-    const templateGithubPath = `${source.repo}${source.path}${source.name}`
-
+  async resolve(targetPath: string, repo: string): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const emitter = tiged(templateGithubPath, {
+    const emitter = tiged(repo, {
       disableCache: true,
       force: true,
       verbose: true,

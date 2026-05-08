@@ -94,6 +94,16 @@ describe('NodeFileSystem', () => {
     })
   })
 
+  describe('copyDir', () => {
+    it('should call fs.copy with src and dest', async () => {
+      const spy = vi.spyOn(fs, 'copy').mockResolvedValue(undefined)
+
+      await fileSystem.copyDir('/src/dir', '/dest/dir')
+
+      expect(spy).toHaveBeenCalledWith('/src/dir', '/dest/dir')
+    })
+  })
+
   describe('listFiles', () => {
     it('should call fast-glob with correct options and normalize slashes', async () => {
       vi.mocked(fg).mockResolvedValue([

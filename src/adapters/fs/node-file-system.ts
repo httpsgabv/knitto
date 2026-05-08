@@ -32,4 +32,8 @@ export class NodeFileSystem implements FileSystem {
     const files = await fg('**/*', { cwd: root, dot: true, onlyFiles: true })
     return files.map(normalizeSlashes)
   }
+
+  async copyDir(src: string, dest: string): Promise<void> {
+    await fs.copy(src, dest)
+  }
 }

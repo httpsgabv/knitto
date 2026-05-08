@@ -32,7 +32,7 @@ describe('GithubTemplateProvider', () => {
       )
     })
 
-    it('should call templateSourceResolver.resolve with correct arguments', async () => {
+    it('should call templateSourceResolver.resolve once with the repo identifier', async () => {
       const source: TemplateSource = {
         type: 'github',
         repo: 'owner/repo',
@@ -44,8 +44,8 @@ describe('GithubTemplateProvider', () => {
 
       const calls = fakeTemplateSourceResolver.getCalls()
       expect(calls.length).toBe(1)
-      expect(calls[0]?.source).toEqual(source)
-      expect(calls[0]?.targetPath).toContain('knitto-repo-my-template-')
+      expect(calls[0]?.repo).toBe('owner/repo')
+      expect(calls[0]?.targetPath).toContain('knitto-repo-repo-')
     })
 
     it('should return template with root path after successful clone', async () => {
@@ -76,7 +76,7 @@ describe('GithubTemplateProvider', () => {
   })
 
   describe('fetchMany', () => {
-    it('should fetch multiple sources', async () => {
+    it('should fetch multiple sources from different repos', async () => {
       const sources: TemplateSource[] = [
         {
           type: 'github',
@@ -97,6 +97,72 @@ describe('GithubTemplateProvider', () => {
       expect(templates).toHaveLength(2)
       expect(templates[0]?.rootPath).toContain('knitto-repo1-template1-')
       expect(templates[1]?.rootPath).toContain('knitto-repo2-template2-')
+    })
+
+    it('should download a shared repo only once when multiple sources reference it', async () => {
+      const sources: TemplateSource[] = [
+        {
+          type: 'github',
+          repo: 'owner/shared',
+          name: 'feature-a',
+          path: '/features/',
+        },
+        {
+          type: 'github',
+          repo: 'owner/shared',
+          name: 'feature-b',
+          path: '/features/',
+        },
+        {
+          type: 'github',
+          repo: 'owner/shared',
+          name: 'feature-c',
+          path: '/features/',
+        },
+        {
+          type: 'github',
+          repo: 'owner/other',
+          name: 'feature-d',
+          path: '/features/',
+        },
+      ]
+
+      const templates = await provider.fetchMany(sources)
+
+      const calls = fakeTemplateSourceResolver.getCalls()
+      expect(calls).toHaveLength(2)
+      const resolvedRepos = calls.map((c) => c.repo).sort()
+      expect(resolvedRepos).toEqual(['owner/other', 'owner/shared'])
+
+      expect(templates).toHaveLength(4)
+      expect(templates[0]?.rootPath).toContain('knitto-shared-feature-a-')
+      expect(templates[1]?.rootPath).toContain('knitto-shared-feature-b-')
+      expect(templates[2]?.rootPath).toContain('knitto-shared-feature-c-')
+      expect(templates[3]?.rootPath).toContain('knitto-other-feature-d-')
+    })
+
+    it('should copy each per-feature subdirectory from the shared repo', async () => {
+      const sources: TemplateSource[] = [
+        {
+          type: 'github',
+          repo: 'owner/shared',
+          name: 'feature-a',
+          path: '/features/',
+        },
+        {
+          type: 'github',
+          repo: 'owner/shared',
+          name: 'feature-b',
+          path: '/features/',
+        },
+      ]
+
+      await provider.fetchMany(sources)
+
+      const copyCalls = fakeFileSystem.getCallsByMethod('copyDir')
+      expect(copyCalls).toHaveLength(2)
+      expect(copyCalls[0]?.args[0]).toContain('feature-a')
+      expect(copyCalls[1]?.args[0]).toContain('feature-b')
     })
   })
 })

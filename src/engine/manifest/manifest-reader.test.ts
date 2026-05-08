@@ -66,6 +66,7 @@ describe('ManifestReader', () => {
       },
       writeJson: async () => undefined,
       listFiles: async () => [],
+      copyDir: async () => undefined,
     }
     const reader = new ManifestReader(fileSystem)
 

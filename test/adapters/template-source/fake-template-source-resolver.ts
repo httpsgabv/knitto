@@ -1,15 +1,14 @@
 import type { TemplateSourceResolver } from '@adapters/template-source/template-source-resolver'
-import type { TemplateSource } from '@core/catalog/template-source'
 
 export class FakeTemplateSourceResolver implements TemplateSourceResolver {
-  private calls: Array<{ targetPath: string; source: TemplateSource }> = []
+  private calls: Array<{ targetPath: string; repo: string }> = []
 
-  async resolve(targetPath: string, source: TemplateSource): Promise<void> {
-    this.calls.push({ targetPath, source })
+  async resolve(targetPath: string, repo: string): Promise<void> {
+    this.calls.push({ targetPath, repo })
     await Promise.resolve()
   }
 
-  getCalls(): Array<{ targetPath: string; source: TemplateSource }> {
+  getCalls(): Array<{ targetPath: string; repo: string }> {
     return [...this.calls]
   }
 

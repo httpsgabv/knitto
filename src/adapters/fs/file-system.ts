@@ -6,4 +6,5 @@ export interface FileSystem {
   readJson<T>(path: string): Promise<T>
   writeJson(path: string, value: unknown): Promise<void>
   listFiles(root: string): Promise<string[]>
+  copyDir(src: string, dest: string): Promise<void>
 }
