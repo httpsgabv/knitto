@@ -13,7 +13,7 @@ export async function loadCatalog(deps: {
     )
     return new OfficialCatalog(data.kits, data.features)
   } catch (error) {
-    deps.onFallback(error as Error)
+    deps.onFallback?.(error as Error)
     return new OfficialCatalog(officialKits, officialFeatures)
   }
 }

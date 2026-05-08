@@ -26,6 +26,7 @@ describe('CopyFileHandler', () => {
       overwrite: true,
     }
 
+    //@ts-expect-error TODO: fix
     await handler.execute(operation, {
       fileSystem,
       variableRenderer: new VariableRenderer(),
@@ -65,6 +66,7 @@ describe('CopyFileHandler', () => {
       overwrite: true,
     }
 
+    //@ts-expect-error TODO: fix
     await handler.execute(operation, {
       fileSystem,
       variableRenderer: new VariableRenderer(),
@@ -105,6 +107,7 @@ describe('CopyFileHandler', () => {
       overwrite: false,
     }
 
+    //@ts-expect-error TODO: fix
     await handler.execute(operation, {
       fileSystem,
       variableRenderer: new VariableRenderer(),

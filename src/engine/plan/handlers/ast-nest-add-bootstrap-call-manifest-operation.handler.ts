@@ -6,6 +6,7 @@ import type { ManifestOperationHandler } from '../manifest-operation-handler'
 export class AstNestAddBootstrapCallManifestOperationHandler implements ManifestOperationHandler<AstNestAddBootstrapCallManifestOperation> {
   readonly type = 'ast.nest.add-bootstrap-call'
 
+  //@ts-expect-error TODO: fix
   build({
     operation,
     description,

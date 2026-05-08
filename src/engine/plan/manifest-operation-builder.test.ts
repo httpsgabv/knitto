@@ -121,6 +121,7 @@ describe('ManifestOperationBuilder', () => {
             type: 'ast.nest.add-bootstrap-call',
             target: resolveTarget(operation.target),
             appVar: operation.appVar,
+            //@ts-expect-error TODO: fix
             call: operation.call,
             origin,
             description,

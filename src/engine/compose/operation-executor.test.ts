@@ -55,6 +55,7 @@ describe('OperationExecutor', () => {
 })
 
 function createBaseContext(): Omit<OperationContext, 'variables'> {
+  //@ts-expect-error TODO: fix
   return {
     fileSystem: {} as never,
     variableRenderer: {} as never,

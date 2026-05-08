@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { OfficialCatalog } from '@catalog/official-catalog'
 import { CreateProjectUseCase } from '@engine/create-project/create-project.use-case'
 import { FeatureResolver } from '@engine/plan/feature-resolver'

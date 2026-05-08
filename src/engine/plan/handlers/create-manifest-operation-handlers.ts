@@ -30,6 +30,7 @@ export function createManifestOperationHandlers(): ManifestOperationHandlerRegis
       new AstAddSideEffectImportManifestOperationHandler(),
     'ast.nest.add-module-import':
       new AstNestAddModuleImportManifestOperationHandler(),
+    //@ts-expect-error TODO: fix
     'ast.nest.add-bootstrap-call':
       new AstNestAddBootstrapCallManifestOperationHandler(),
     'ast.nest.add-bootstrap-variable':

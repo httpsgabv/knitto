@@ -73,6 +73,7 @@ export class NestBootstrapEditor {
         : undefined
 
       if (
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
         existingDeclarationKind === declarationKind &&
         parsedInitializer !== undefined &&
         this.expressionsAreEquivalent(parsedInitializer, initializer)

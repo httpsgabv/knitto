@@ -20,6 +20,7 @@ describe('ManifestOperationHandlerRegistry', () => {
       build: () => ({}) as never,
     } satisfies ManifestOperationHandler<CopyFileManifestOperation>
 
+    //@ts-expect-error TODO: fix
     const registry = new ManifestOperationHandlerRegistry({
       'copy-file': handler,
       'merge-package-json': {

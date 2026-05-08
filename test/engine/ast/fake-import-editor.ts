@@ -1,19 +1,18 @@
 import type { ImportEditor } from '@engine/ast/import-editor'
 import type { SourceFile } from 'ts-morph'
 
-type ImportEditorShape = Pick<ImportEditor, 'ensureNamedImport'>
-
 type EnsureNamedImportCall = {
   sourceFile: SourceFile
   name: string
   moduleSpecifier: string
 }
 
-export class FakeImportEditor {
+export class FakeImportEditor implements ImportEditor {
   ensureNamedImportCalls: EnsureNamedImportCall[] = []
 
-  readonly instance: ImportEditorShape = {
+  readonly instance: ImportEditor = {
     ensureNamedImport: this.ensureNamedImport.bind(this),
+    ensureSideEffectImport: this.ensureSideEffectImport.bind(this)
   }
 
   ensureNamedImport(sourceFile: SourceFile, name: string, moduleSpecifier: string): void {
@@ -22,5 +21,12 @@ export class FakeImportEditor {
       name,
       moduleSpecifier,
     })
+  }
+
+  ensureSideEffectImport(sourceFile: SourceFile, moduleSpecifier: string, position?: 'top' | 'bottom'): void {
+    console.log(sourceFile)
+    console.log(moduleSpecifier)
+    console.log(position)
+    throw new Error('Method not implemented.')
   }
 }
